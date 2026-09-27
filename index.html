@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#07111f" />
+  <meta name="description" content="Rotation IQ — a positional basketball rotation coach for live games." />
+  <title>Rotation IQ — Basketball Rotation Coach</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">RQ</div>
+        <div>
+          <div class="brand-name">Rotation IQ</div>
+          <div class="brand-sub">Basketball Rotation Coach</div>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn" id="undoBtn" title="Undo last action" aria-label="Undo">↶</button>
+        <button class="icon-btn" id="redoBtn" title="Redo" aria-label="Redo">↷</button>
+        <button class="secondary-btn" id="setupBtn">Team setup</button>
+        <button class="primary-btn" id="newGameBtn">New game</button>
+      </div>
+    </header>
+
+    <main class="main-grid">
+      <section class="game-strip card">
+        <div class="game-mode">
+          <span class="eyebrow">GAME FORMAT</span>
+          <div class="segmented" id="modeSwitch">
+            <button data-mode="rep" class="active">Rep · 4 × 10</button>
+            <button data-mode="domestic">Domestic · 2 × 18</button>
+          </div>
+        </div>
+        <div class="scoreboard">
+          <div class="score-team">
+            <span class="team-label">LAKERS</span>
+            <strong id="teamScore">0</strong>
+          </div>
+          <div class="score-divider">—</div>
+          <div class="score-team opponent">
+            <span class="team-label">OPPONENT</span>
+            <strong id="oppScore">0</strong>
+          </div>
+          <div class="score-controls">
+            <button data-score="team" data-delta="1">+1</button>
+            <button data-score="team" data-delta="2">+2</button>
+            <button data-score="team" data-delta="3">+3</button>
+            <button data-score="opp" data-delta="1">Opp +1</button>
+          </div>
+        </div>
+        <div class="clock-block">
+          <span class="eyebrow" id="periodLabel">Q1</span>
+          <button id="clockDisplay" class="clock">10:00</button>
+          <div class="clock-actions">
+            <button class="primary-btn" id="clockToggle">Start</button>
+            <button class="secondary-btn" id="clockReset">Reset</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="lineup-card card">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">LIVE LINEUP</span>
+            <h1>Five on court</h1>
+          </div>
+          <div class="structure-pill" id="structurePill">5 / 5 positions</div>
+        </div>
+        <div class="court-wrap">
+          <div class="court-lines"></div>
+          <div class="court-positions" id="courtPositions"></div>
+        </div>
+        <div class="lineup-note" id="lineupNote"></div>
+      </section>
+
+      <aside class="assistant-card card">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">COACH ASSISTANT</span>
+            <h2>Next rotation</h2>
+          </div>
+          <span class="live-dot">LIVE</span>
+        </div>
+        <div id="recommendation" class="recommendation"></div>
+        <button class="primary-btn full" id="applyRecommendation">Apply recommendation</button>
+        <div class="engine-rules">
+          <span>Structure first</span><span>•</span><span>Coach overrides</span><span>•</span><span>Minutes aware</span>
+        </div>
+      </aside>
+
+      <section class="bench-card card">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">ROSTER</span>
+            <h2>Bench & player controls</h2>
+          </div>
+          <div class="bench-filter" id="statusFilter">
+            <button class="active" data-filter="all">All</button>
+            <button data-filter="hot">🔥 Hot</button>
+            <button data-filter="rest">Rest</button>
+            <button data-filter="foul">Foul</button>
+          </div>
+        </div>
+        <div id="rosterGrid" class="roster-grid"></div>
+      </section>
+
+      <section class="analytics-card card">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">ROTATION BOARD</span>
+            <h2>Minutes & workload</h2>
+          </div>
+          <button class="secondary-btn" id="resetMinutesBtn">Reset minutes</button>
+        </div>
+        <div id="minutesBoard" class="minutes-board"></div>
+      </section>
+
+      <section class="timeline-card card">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">GAME FLOW</span>
+            <h2>Rotation timeline</h2>
+          </div>
+          <span class="muted" id="timelineSummary">No substitutions yet</span>
+        </div>
+        <div id="timeline" class="timeline"></div>
+      </section>
+    </main>
+  </div>
+
+  <div id="modalRoot"></div>
+  <div id="toast" class="toast" role="status"></div>
+  <script src="app.js"></script>
+</body>
+</html>
