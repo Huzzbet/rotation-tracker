@@ -29,6 +29,10 @@
 
     <main class="main-grid">
       <section class="game-strip card">
+        <div class="game-livebar">
+          <div class="live-status"><span class="pulse"></span> LIVE GAME</div>
+          <div class="live-context"><span id="liveQuarter">Q1</span><span>•</span><span id="livePhase">START</span><span>•</span><span id="liveSituation">TIED</span></div>
+        </div>
         <div class="game-mode">
           <span class="eyebrow">GAME FORMAT</span>
           <div class="segmented" id="modeSwitch">
@@ -60,6 +64,23 @@
             <button class="primary-btn" id="clockToggle">Start</button>
             <button class="secondary-btn" id="clockReset">Reset</button>
           </div>
+        </div>
+      </section>
+
+      <section class="game-command card">
+        <div class="command-main">
+          <div class="command-label">GAME COMMAND</div>
+          <div class="command-title" id="commandTitle">Ready for tip-off</div>
+          <div class="command-sub" id="commandSub">Rotation IQ will surface the next coaching decision as the game develops.</div>
+        </div>
+        <div class="command-stats">
+          <div><span>LEAD</span><strong id="commandLead">—</strong></div>
+          <div><span>STINT</span><strong id="commandStint">—</strong></div>
+          <div><span>HOT</span><strong id="commandHot">—</strong></div>
+        </div>
+        <div class="momentum-wrap">
+          <div class="momentum-head"><span>MOMENTUM</span><span id="momentumLabel">EVEN</span></div>
+          <div class="momentum-track"><span id="momentumBar"></span></div>
         </div>
       </section>
 
