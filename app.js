@@ -1,9 +1,9 @@
 const KEY='rotationIQ.v2', POS=[1,2,3,4,5], PN={1:'PG',2:'SG',3:'SF',4:'PF',5:'C'}, F={rep:{periods:4,sec:600},domestic:{periods:2,sec:1080}};
-const DEFAULT=[['rodion','Rodion',[4,5]],['jacob','Jacob',[4,5]],['archer','Archer',[2,3]],['max','Max',[2,3]],['bill','Bill',[1,2,3,4]],['alvin','Alvin',[1,2,3]],['ethan','Ethan',[3,4]],['tom','Tom',[1,2,3]],['tate','Tate',[2,3,4]]];
+const DEFAULT=[['rodion','Rodion Prystupa',94,[4,5]],['jacob','Jacob Nguyen',36,[4,5]],['archer','Archer Kenny',16,[2,3]],['max','Max Payne',10,[2,3]],['bill','Bill Pham',20,[1,2,3,4]],['alvin','Alvin Chen',86,[1,2,3]],['ethan','Ethan Poon',90,[3,4]],['tom',"Thomas O'Sullivan",22,[1,2,3]],['tate','Tate Power',72,[2,3,4]]];
 let state=load(),undoStack=[],redoStack=[],filter='all';
 if(!state.plan)state.plan='balanced'; if(!state.tactic)state.tactic='balanced'; if(!state.chemistry)state.chemistry={}; if(!state.opponent)state.opponent={press:false,zone:false,scoring:false,rebound:false,shooting:false,ballhandling:false};
-function fresh(){return {mode:'rep',period:1,remaining:600,running:false,team:0,opp:0,lineup:{1:'alvin',2:'tom',3:'archer',4:'ethan',5:'rodion'},roster:DEFAULT.map(x=>({id:x[0],name:x[1],positions:x[2],hot:false,rest:false,foul:false,on:0,stint:0,restSec:0})),timeline:[],plan:'balanced',tactic:'balanced',chemistry:{},opponent:{press:false,zone:false,scoring:false,rebound:false,shooting:false,ballhandling:false}}}
-function load(){try{let x=JSON.parse(localStorage.getItem(KEY));return x?x:fresh()}catch{return fresh()}}
+function fresh(){return {mode:'rep',period:1,remaining:600,running:false,team:0,opp:0,lineup:{1:'alvin',2:'tom',3:'archer',4:'ethan',5:'rodion'},roster:DEFAULT.map(x=>({id:x[0],name:x[1],number:x[2],positions:x[3],hot:false,rest:false,foul:false,on:0,stint:0,restSec:0})),timeline:[],plan:'balanced',tactic:'balanced',chemistry:{},opponent:{press:false,zone:false,scoring:false,rebound:false,shooting:false,ballhandling:false}}}
+function load(){try{let x=JSON.parse(localStorage.getItem(KEY));if(!x)return fresh();let base=fresh();x.roster=(x.roster||base.roster).map((p0,i)=>{let d=DEFAULT.find(d=>d[0]===p0.id)||DEFAULT[i];return {...p0,name:p0.name||d?.[1]||'Player',number:p0.number??d?.[2]??'',positions:p0.positions||d?.[3]||[]}});return x}catch{return fresh()}}
 function save(){localStorage.setItem(KEY,JSON.stringify(state))}
 function fiveKey(lineup=state.lineup){return POS.map(pos=>lineup[pos]||'').join('|')}
 function chemistryEntry(key){if(!state.chemistry[key])state.chemistry[key]={sec:0,net:0,events:0,stints:0};let e=state.chemistry[key];if(e.events==null)e.events=e.uses||0;if(e.stints==null)e.stints=0;return e}
@@ -51,34 +51,35 @@ function tm(s){s=Math.max(0,Math.ceil(s));return String(Math.floor(s/60)).padSta
 function min(s){return Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0')}
 function periodSec(){return F[state.mode].sec}
 function structure(){let missing=POS.filter(x=>!state.lineup[x]),seen=new Set(),dupes=[],invalid=[];Object.values(state.lineup).forEach(id=>seen.has(id)?dupes.push(id):seen.add(id));POS.forEach(x=>{let q=p(state.lineup[x]);if(q&&!q.positions.includes(x))invalid.push(q.name+' at '+PN[x])});return {missing,dupes,invalid,clean:!missing.length&&!dupes.length&&!invalid.length}}
-function tick(){
+let timerFrame=null;
+function tick(now){
   if(!state.running)return;
-  const now=Date.now();
-  if(!state.lastTick)state.lastTick=now;
-  const d=Math.max(0,Math.min(1,(now-state.lastTick)/1000));
-  if(d<0.05)return;
-  state.lastTick=now;
-  state.remaining=Math.max(0,state.remaining-d);
-  trackChemistry(d);
-  state.roster.forEach(x=>court(x.id)?(x.on+=d,x.stint+=d):(x.restSec+=d));
-  if(state.remaining<=0){
-    state.remaining=0;
-    state.running=false;
-    state.lastTick=null;
-    toast(state.period===F[state.mode].periods?'Final siren':'End of period');
+  const current=now||performance.now();
+  if(state.lastTick==null)state.lastTick=current;
+  const d=Math.max(0,Math.min(1,(current-state.lastTick)/1000));
+  if(d>0){
+    state.lastTick=current;
+    state.remaining=Math.max(0,state.remaining-d);
+    trackChemistry(d);
+    state.roster.forEach(x=>court(x.id)?(x.on+=d,x.stint+=d):(x.restSec+=d));
+    if(state.remaining<=0){state.remaining=0;state.running=false;state.lastTick=null;timerFrame=null;toast(state.period===F[state.mode].periods?'Final siren':'End of period');}
+    render();
   }
-  render();
-  save();
+  if(state.running){timerFrame=requestAnimationFrame(tick);}
 }
 function toggleClock(){
   if(state.remaining<=0&&state.period<F[state.mode].periods){nextQ();return;}
   if(state.running){
-    tick();
+    tick(performance.now());
     state.running=false;
     state.lastTick=null;
+    if(timerFrame)cancelAnimationFrame(timerFrame);
+    timerFrame=null;
   }else{
     state.running=true;
-    state.lastTick=Date.now();
+    state.lastTick=performance.now();
+    if(timerFrame)cancelAnimationFrame(timerFrame);
+    timerFrame=requestAnimationFrame(tick);
   }
   save();
   render();
@@ -255,6 +256,6 @@ function newGame(){if(!confirm('Start a new game? Current game data will be clea
 function resetMinutes(){act(()=>state.roster.forEach(x=>{x.on=0;x.stint=0;x.restSec=0}))}
 function setup(){let root=document.getElementById('modalRoot'),rows=state.roster.map(x=>'<div class="setup-row" data-id="'+x.id+'"><div class="field"><label>Name</label><input data-name value="'+x.name.replace(/"/g,'&quot;')+'"></div><div class="field"><label>Natural positions</label><div class="position-picks">'+POS.map(y=>'<button type="button" data-pos="'+y+'" class="'+(x.positions.includes(y)?'active':'')+'">'+PN[y]+'</button>').join('')+'</div></div></div>').join('');root.innerHTML='<div class="modal-backdrop"><div class="modal"><div class="modal-head"><h2>Team setup</h2><button class="icon-btn" id="closeSetup">×</button></div><div class="modal-body"><p class="muted">Edit names and natural positions. The engine uses these positions to preserve structure.</p>'+rows+'<div class="modal-actions"><button class="secondary-btn" id="cancelSetup">Cancel</button><button class="primary-btn" id="saveSetup">Save team</button></div></div></div></div>';root.querySelectorAll('[data-pos]').forEach(b=>b.onclick=()=>b.classList.toggle('active'));document.getElementById('closeSetup').onclick=()=>root.innerHTML='';document.getElementById('cancelSetup').onclick=()=>root.innerHTML='';document.getElementById('saveSetup').onclick=saveSetup}
 function saveSetup(){act(()=>document.querySelectorAll('.setup-row').forEach(row=>{let x=p(row.dataset.id);x.name=row.querySelector('[data-name]').value.trim()||x.name;let pos=[...row.querySelectorAll('[data-pos].active')].map(b=>+b.dataset.pos);if(pos.length)x.positions=pos}));document.getElementById('modalRoot').innerHTML='';toast('Team setup saved')}
-function bind(){document.getElementById('undoBtn').onclick=undo;document.getElementById('redoBtn').onclick=redo;document.getElementById('newGameBtn').onclick=newGame;document.getElementById('setupBtn').onclick=setup;document.getElementById('clockToggle').onclick=()=>state.remaining===0&&state.period<F[state.mode].periods?nextQ():toggleClock();document.getElementById('clockReset').onclick=()=>act(()=>{state.running=false;state.lastTick=null;state.remaining=periodSec()});document.getElementById('applyRecommendation').onclick=applyRec;document.getElementById('resetMinutesBtn').onclick=resetMinutes;document.querySelectorAll('#planSwitch button').forEach(b=>b.onclick=()=>act(()=>{state.plan=b.dataset.plan}));document.querySelectorAll('#tacticalSwitch button').forEach(b=>b.onclick=()=>act(()=>{state.tactic=b.dataset.tactic}));document.querySelectorAll('#modeSwitch button').forEach(b=>b.onclick=()=>act(()=>{state.mode=b.dataset.mode;state.period=1;state.remaining=F[state.mode].sec;state.running=false}));document.querySelectorAll('.score-controls button').forEach(b=>b.onclick=()=>score(b.dataset.score,+b.dataset.delta));document.getElementById('opponentBoard').onclick=e=>{let b=e.target.closest('[data-opponent]');if(b){act(()=>{state.opponent[b.dataset.opponent]=!state.opponent[b.dataset.opponent]});return}};document.getElementById('statusFilter').onclick=e=>{let b=e.target.closest('button');if(b){filter=b.dataset.filter;render()}};document.getElementById('rosterGrid').onclick=e=>{let b=e.target.closest('[data-status]');if(b){status(b.dataset.id,b.dataset.status);return}b=e.target.closest('[data-sub]');if(b)manual(b.dataset.sub)};window.onkeydown=e=>{if((e.metaKey||e.ctrlKey)&&e.key==='z'){e.preventDefault();undo()}if(e.code==='Space'&&document.activeElement.tagName!=='INPUT'){e.preventDefault();toggleClock()}}}
-bind();render();setInterval(tick,250);
+function bind(){document.getElementById('undoBtn').onclick=undo;document.getElementById('redoBtn').onclick=redo;document.getElementById('newGameBtn').onclick=newGame;document.getElementById('setupBtn').onclick=setup;document.getElementById('clockToggle').onclick=()=>state.remaining===0&&state.period<F[state.mode].periods?nextQ():toggleClock();document.getElementById('clockReset').onclick=()=>act(()=>{state.running=false;state.lastTick=null;state.remaining=periodSec();if(timerFrame)cancelAnimationFrame(timerFrame);timerFrame=null});document.getElementById('applyRecommendation').onclick=applyRec;document.getElementById('resetMinutesBtn').onclick=resetMinutes;document.querySelectorAll('#planSwitch button').forEach(b=>b.onclick=()=>act(()=>{state.plan=b.dataset.plan}));document.querySelectorAll('#tacticalSwitch button').forEach(b=>b.onclick=()=>act(()=>{state.tactic=b.dataset.tactic}));document.querySelectorAll('#modeSwitch button').forEach(b=>b.onclick=()=>act(()=>{state.mode=b.dataset.mode;state.period=1;state.remaining=F[state.mode].sec;state.running=false}));document.querySelectorAll('.score-controls button').forEach(b=>b.onclick=()=>score(b.dataset.score,+b.dataset.delta));document.getElementById('opponentBoard').onclick=e=>{let b=e.target.closest('[data-opponent]');if(b){act(()=>{state.opponent[b.dataset.opponent]=!state.opponent[b.dataset.opponent]});return}};document.getElementById('statusFilter').onclick=e=>{let b=e.target.closest('button');if(b){filter=b.dataset.filter;render()}};document.getElementById('rosterGrid').onclick=e=>{let b=e.target.closest('[data-status]');if(b){status(b.dataset.id,b.dataset.status);return}b=e.target.closest('[data-sub]');if(b)manual(b.dataset.sub)};window.onkeydown=e=>{if((e.metaKey||e.ctrlKey)&&e.key==='z'){e.preventDefault();undo()}if(e.code==='Space'&&document.activeElement.tagName!=='INPUT'){e.preventDefault();toggleClock()}}}
+bind();render();
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}
