@@ -80,39 +80,75 @@ function min(s){return Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,
 function periodSec(){return F[state.mode].sec}
 function structure(){let missing=POS.filter(x=>!state.lineup[x]),seen=new Set(),dupes=[],invalid=[];Object.values(state.lineup).forEach(id=>seen.has(id)?dupes.push(id):seen.add(id));POS.forEach(x=>{let q=p(state.lineup[x]);if(q&&!q.positions.includes(x))invalid.push(q.name+' at '+PN[x])});return {missing,dupes,invalid,clean:!missing.length&&!dupes.length&&!invalid.length}}
 let timerFrame=null;
-function tick(now){
-  if(!state.running)return;
-  const current=now||performance.now();
-  if(state.lastTick==null)state.lastTick=current;
-  const d=Math.max(0,Math.min(1,(current-state.lastTick)/1000));
-  if(d>0){
-    state.lastTick=current;
-    state.remaining=Math.max(0,state.remaining-d);
-    trackChemistry(d);
-    state.roster.forEach(x=>court(x.id)?(x.on+=d,x.stint+=d):(x.restSec+=d));
-    if(state.remaining<=0){state.remaining=0;state.running=false;state.lastTick=null;timerFrame=null;toast(state.period===F[state.mode].periods?'Final siren':'End of period');}
-    render();
-  }
-  if(state.running){timerFrame=requestAnimationFrame(tick);}
+let clockLastRender=0;
+function clockElapsed(){
+  if(!state.running||!state.clockStartedAt)return 0;
+  return Math.max(0,(Date.now()-state.clockStartedAt)/1000);
 }
-function toggleClock(){
-  if(state.remaining<=0&&state.period<F[state.mode].periods){nextQ();return;}
-  if(state.running){
-    tick(performance.now());
+function syncClock(){
+  if(!state.running||!state.clockStartedAt)return;
+  const elapsed=clockElapsed();
+  const next=Math.max(0,state.clockBaseRemaining-elapsed);
+  const delta=Math.max(0,next-state.remaining);
+  const old=state.remaining;
+  state.remaining=next;
+  if(elapsed>0){
+    const tracked=Math.min(elapsed,Math.max(0,state.clockBaseRemaining));
+    const already=Math.max(0,state.clockTracked||0);
+    const add=Math.max(0,tracked-already);
+    if(add>0){
+      trackChemistry(add);
+      state.roster.forEach(x=>court(x.id)?(x.on+=add,x.stint+=add):(x.restSec+=add));
+      state.clockTracked=tracked;
+    }
+  }
+  if(state.remaining<=0){
+    state.remaining=0;
     state.running=false;
-    state.lastTick=null;
+    state.clockStartedAt=null;
+    state.clockBaseRemaining=0;
+    state.clockTracked=0;
     if(timerFrame)cancelAnimationFrame(timerFrame);
     timerFrame=null;
-  }else{
-    state.running=true;
-    state.lastTick=performance.now();
-    if(timerFrame)cancelAnimationFrame(timerFrame);
-    timerFrame=requestAnimationFrame(tick);
+    toast(state.period===F[state.mode].periods?'Final siren':'End of period');
   }
+  return old!==state.remaining;
+}
+function tick(){
+  if(!state.running)return;
+  syncClock();
+  render();
+  if(state.running)timerFrame=requestAnimationFrame(tick);
+}
+function startClock(){
+  if(state.remaining<=0&&state.period<F[state.mode].periods){nextQ();return;}
+  state.running=true;
+  state.clockBaseRemaining=state.remaining;
+  state.clockStartedAt=Date.now();
+  state.clockTracked=0;
+  if(timerFrame)cancelAnimationFrame(timerFrame);
+  timerFrame=requestAnimationFrame(tick);
   save();
   render();
 }
-function nextQ(){if(state.period>=F[state.mode].periods)return;act(()=>{state.period++;state.remaining=periodSec();state.running=false;state.roster.forEach(x=>x.stint=0)})}
+function pauseClock(){
+  syncClock();
+  state.running=false;
+  state.clockStartedAt=null;
+  state.clockBaseRemaining=state.remaining;
+  state.clockTracked=0;
+  if(timerFrame)cancelAnimationFrame(timerFrame);
+  timerFrame=null;
+  save();
+  render();
+}
+function toggleClock(){
+  if(state.running)pauseClock();else startClock();
+}
+function nextQ(){
+  if(state.period>=F[state.mode].periods)return;
+  act(()=>{state.period++;state.remaining=periodSec();state.running=false;state.clockStartedAt=null;state.clockBaseRemaining=state.remaining;state.clockTracked=0;state.roster.forEach(x=>x.stint=0)});
+}
 function opponentWeight(x){
   let o=state.opponent||{},s=0,r=[];
   if(o.press){
