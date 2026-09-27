@@ -81,27 +81,27 @@ function min(s){return Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,
 function periodSec(){return F[state.mode].sec}
 function structure(){let missing=POS.filter(x=>!state.lineup[x]),seen=new Set(),dupes=[],invalid=[];Object.values(state.lineup).forEach(id=>seen.has(id)?dupes.push(id):seen.add(id));POS.forEach(x=>{let q=p(state.lineup[x]);if(q&&!q.positions.includes(x))invalid.push(q.name+' at '+PN[x])});return {missing,dupes,invalid,clean:!missing.length&&!dupes.length&&!invalid.length}}
 let timerFrame=null;
-let clockLastRender=0;
-function clockElapsed(){
-  if(!state.running||!state.clockStartedAt)return 0;
-  return Math.max(0,(Date.now()-state.clockStartedAt)/1000);
+let clockInterval=null;
+function updateClockUI(){
+  const d=document.getElementById('clockDisplay');
+  const q=document.getElementById('periodLabel');
+  const b=document.getElementById('clockToggle');
+  if(d)d.textContent=tm(state.remaining);
+  if(q)q.textContent='Q'+state.period;
+  if(b)b.textContent=state.remaining===0&&state.period<F[state.mode].periods?'Next quarter':state.running?'Pause':'Start';
 }
 function syncClock(){
-  if(!state.running||!state.clockStartedAt)return;
-  const elapsed=clockElapsed();
+  if(!state.running||!state.clockStartedAt)return false;
+  const elapsed=Math.max(0,(Date.now()-state.clockStartedAt)/1000);
   const next=Math.max(0,state.clockBaseRemaining-elapsed);
-  const delta=Math.max(0,next-state.remaining);
-  const old=state.remaining;
+  const tracked=Math.min(elapsed,Math.max(0,state.clockBaseRemaining));
+  const already=Math.max(0,state.clockTracked||0);
+  const add=Math.max(0,tracked-already);
   state.remaining=next;
-  if(elapsed>0){
-    const tracked=Math.min(elapsed,Math.max(0,state.clockBaseRemaining));
-    const already=Math.max(0,state.clockTracked||0);
-    const add=Math.max(0,tracked-already);
-    if(add>0){
-      trackChemistry(add);
-      state.roster.forEach(x=>court(x.id)?(x.on+=add,x.stint+=add):(x.restSec+=add));
-      state.clockTracked=tracked;
-    }
+  if(add>0){
+    trackChemistry(add);
+    state.roster.forEach(x=>court(x.id)?(x.on+=add,x.stint+=add):(x.restSec+=add));
+    state.clockTracked=tracked;
   }
   if(state.remaining<=0){
     state.remaining=0;
@@ -109,37 +109,37 @@ function syncClock(){
     state.clockStartedAt=null;
     state.clockBaseRemaining=0;
     state.clockTracked=0;
-    if(timerFrame)cancelAnimationFrame(timerFrame);
-    timerFrame=null;
+    if(clockInterval){clearInterval(clockInterval);clockInterval=null}
+    save();
+    updateClockUI();
     toast(state.period===F[state.mode].periods?'Final siren':'End of period');
+    render();
+    return true;
   }
-  return old!==state.remaining;
-}
-function tick(){
-  if(!state.running)return;
-  syncClock();
-  render();
-  if(state.running)timerFrame=requestAnimationFrame(tick);
+  updateClockUI();
+  return true;
 }
 function startClock(){
-  if(state.remaining<=0&&state.period<F[state.mode].periods){nextQ();return;}
+  if(state.remaining<=0&&state.period<F[state.mode].periods){nextQ();return}
+  if(state.running)return;
   state.running=true;
   state.clockBaseRemaining=state.remaining;
   state.clockStartedAt=Date.now();
   state.clockTracked=0;
-  if(timerFrame)cancelAnimationFrame(timerFrame);
-  timerFrame=requestAnimationFrame(tick);
+  if(clockInterval)clearInterval(clockInterval);
+  clockInterval=setInterval(syncClock,100);
+  updateClockUI();
   save();
-  render();
 }
 function pauseClock(){
+  if(!state.running)return;
   syncClock();
   state.running=false;
   state.clockStartedAt=null;
   state.clockBaseRemaining=state.remaining;
   state.clockTracked=0;
-  if(timerFrame)cancelAnimationFrame(timerFrame);
-  timerFrame=null;
+  if(clockInterval){clearInterval(clockInterval);clockInterval=null}
+  updateClockUI();
   save();
   render();
 }
@@ -148,7 +148,15 @@ function toggleClock(){
 }
 function nextQ(){
   if(state.period>=F[state.mode].periods)return;
-  act(()=>{state.period++;state.remaining=periodSec();state.running=false;state.clockStartedAt=null;state.clockBaseRemaining=state.remaining;state.clockTracked=0;state.roster.forEach(x=>x.stint=0)});
+  act(()=>{
+    state.period++;
+    state.remaining=periodSec();
+    state.running=false;
+    state.clockStartedAt=null;
+    state.clockBaseRemaining=state.remaining;
+    state.clockTracked=0;
+    state.roster.forEach(x=>x.stint=0);
+  });
 }
 function opponentWeight(x){
   let o=state.opponent||{},s=0,r=[];
