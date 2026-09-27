@@ -6,10 +6,17 @@ function fresh(){return {mode:'rep',period:1,remaining:600,running:false,team:0,
 function load(){try{let x=JSON.parse(localStorage.getItem(KEY));return x?x:fresh()}catch{return fresh()}}
 function save(){localStorage.setItem(KEY,JSON.stringify({...state,running:false}))}
 function fiveKey(lineup=state.lineup){return POS.map(pos=>lineup[pos]||'').join('|')}
-function chemistryEntry(key){if(!state.chemistry[key])state.chemistry[key]={sec:0,net:0,events:0,stints:0};return state.chemistry[key]}
+function chemistryEntry(key){if(!state.chemistry[key])state.chemistry[key]={sec:0,net:0,events:0,stints:0};let e=state.chemistry[key];if(e.events==null)e.events=e.uses||0;if(e.stints==null)e.stints=0;return e}
+function scoreBand(){let d=state.team-state.opp;return d>=6?'LEAD 6+':d>=3?'LEAD 3-5':d>=1?'LEAD 1-2':d<=-6?'TRAIL 6+':d<=-3?'TRAIL 3-5':d<=-1?'TRAIL 1-2':'TIED'}
+function clockPhase(){let ratio=state.remaining/periodSec();return ratio>=.75?'START':ratio<=.25?'CLOSING':'MIDDLE'}
+function gameContext(){return 'Q'+state.period+' · '+clockPhase()+' · '+scoreBand()}
+function contextKey(lineup=state.lineup){return fiveKey(lineup)+'||'+gameContext()}
+function contextEntry(lineup=state.lineup){let key=contextKey(lineup);if(!state.chemistry[key])state.chemistry[key]={sec:0,net:0,events:0,stints:0,context:true};return state.chemistry[key]}
+function contextBonus(lineup=state.lineup){let e=state.chemistry[contextKey(lineup)];if(!e||e.sec<45)return 0;return Math.max(-4,Math.min(4,e.net/5))}
 function trackChemistry(seconds){
   if(seconds<=0)return;
   let e=chemistryEntry(fiveKey()); e.sec+=seconds;
+  let ce=contextEntry(); ce.sec+=seconds;
 }
 function chemistryScore(lineup=state.lineup){
   let e=state.chemistry[fiveKey(lineup)]; if(!e||e.sec<30)return 0;
@@ -48,16 +55,16 @@ function tick(){if(!state.running)return;let now=Date.now(),d=Math.min(2,(now-(s
 function toggleClock(){state.running=!state.running;state.lastTick=Date.now();save();render()}
 function nextQ(){if(state.period>=F[state.mode].periods)return;act(()=>{state.period++;state.remaining=periodSec();state.running=false;state.roster.forEach(x=>x.stint=0)})}
 function rec(){let best=null,avg=state.roster.reduce((a,x)=>a+x.on,0)/state.roster.length;state.roster.filter(x=>court(x.id)).forEach(out=>{POS.forEach(pos=>{if(state.lineup[pos]!==out.id)return;state.roster.filter(x=>!court(x.id)&&x.positions.includes(pos)).forEach(i=>{let s=0,r=[];if(i.hot){s+=20;r.push('HOT hand')}if(i.rest){s+=22;r.push('fresh')}if(out.rest){s+=30;r.push('REST requested')}if(out.foul){s+=24;r.push('foul protection')}if(out.hot)s-=45;if(Math.abs(i.on-out.on)>90){s+=12;r.push('minutes balance')}
-if(state.plan==='hot'&&i.hot){s+=25;r.push('hot-hand plan')}if(state.plan==='hot'&&out.hot){s-=30;r.push('keep HOT player on court')}if(state.plan==='foul'&&out.foul){s+=18;r.push('foul plan')}if(state.plan==='protect'){if(i.foul)s-=18;if(i.on<avg)s+=7;r.push('workload protection')}if(state.plan==='chase'&&i.hot){s+=12;r.push('scoring option')}if(state.plan==='chase'&&i.on<avg)s+=5;let projected={...state.lineup};projected[pos]=i.id;let cb=chemistryBonus(projected);if(cb){s+=cb;r.push(cb>=3?'proven five-man unit':cb<=-3?'chemistry warning':'building chemistry')}s+=Math.min(15,i.restSec/60*1.2)-Math.min(12,i.stint/60);if(!best||s>best.s)best={s,in:i.id,out:out.id,pos:pos,r:r}})})});return best}
+if(state.plan==='hot'&&i.hot){s+=25;r.push('hot-hand plan')}if(state.plan==='hot'&&out.hot){s-=30;r.push('keep HOT player on court')}if(state.plan==='foul'&&out.foul){s+=18;r.push('foul plan')}if(state.plan==='protect'){if(i.foul)s-=18;if(i.on<avg)s+=7;r.push('workload protection')}if(state.plan==='chase'&&i.hot){s+=12;r.push('scoring option')}if(state.plan==='chase'&&i.on<avg)s+=5;let projected={...state.lineup};projected[pos]=i.id;let cb=chemistryBonus(projected),xb=contextBonus(projected);if(cb){s+=cb;r.push(cb>=3?'proven five-man unit':cb<=-3?'chemistry warning':'building chemistry')}if(xb){s+=xb*1.5;r.push(xb>=2?'proven in this game state':xb<=-2?'state-specific warning':'works in this game state')}s+=Math.min(15,i.restSec/60*1.2)-Math.min(12,i.stint/60);if(!best||s>best.s)best={s,in:i.id,out:out.id,pos:pos,r:r}})})});return best}
 function sub(outId,inId,pos,source){let o=p(outId),i=p(inId);if(!o||!i||!i.positions.includes(pos))return;state.lineup[pos]=inId;o.stint=0;i.stint=0;i.rest=false;chemistryEntry(fiveKey()).events++;chemistryEntry(fiveKey()).stints++;state.timeline.push({q:state.period,t:state.remaining,out:outId,in:inId,pos:pos,source:source||'Coach'});if(state.timeline.length>60)state.timeline.shift()}
 function applyRec(){let r=rec();if(!r)return toast('No clean positional rotation');act(()=>sub(r.out,r.in,r.pos,'Coach assistant'))}
 function manual(id){let i=p(id),best=null;i.positions.forEach(pos=>{if(!state.lineup[pos])return;let o=p(state.lineup[pos]),s=(o.rest?30:0)+(o.foul?20:0)-(o.hot?30:0)+Math.max(0,5-o.stint/60);if(!best||s>best.s)best={s,out:o.id,pos:pos}});if(!best)return toast('No safe positional replacement');act(()=>sub(best.out,id,best.pos,'Coach'))}
 function status(id,k){act(()=>{let x=p(id);x[k]=!x[k];if(k==='rest'&&x.rest)x.stint=0})}
 function score(team,d){
   act(()=>{
-    let key=fiveKey(),e=chemistryEntry(key);
+    let key=fiveKey(),e=chemistryEntry(key),ce=contextEntry();
     state[team==='team'?'team':'opp']=Math.max(0,state[team==='team'?'team':'opp']+d);
-    e.net+=team==='team'?d:-d;e.events++;
+    e.net+=team==='team'?d:-d;e.events++;ce.net+=team==='team'?d:-d;ce.events++;
   })
 }
 function tacticalFive(){
@@ -180,6 +187,7 @@ function renderChemistry(){
     '<div class="chemistry-stat-grid"><div><small>TIME TOGETHER</small><strong>'+min(current.sec)+'</strong></div><div><small>NET SCORE</small><strong>'+(current.net>0?'+':'')+current.net+'</strong></div><div><small>EVENTS</small><strong>'+current.events+'</strong></div></div>'+
     '<div class="chemistry-list">'+(rows||'<div class="muted">Play the game and Rotation IQ will learn which five-man combinations are working.</div>')+'</div>';
 }
+function renderGameIntelligence(){let el=document.getElementById('gameIntelligence');if(!el)return;let ctx=gameContext(),current=contextEntry(),rows=Object.entries(state.chemistry).filter(([k,e])=>e.context&&e.sec>0).sort((a,b)=>b[1].sec-a[1].sec).slice(0,6);let label=current.sec<45?'LEARNING':current.net>=5?'WORKING':current.net<=-5?'WATCH':'NEUTRAL';el.innerHTML='<div class="intel-current"><div><span class="eyebrow">CURRENT GAME STATE</span><strong>'+ctx+'</strong><small>'+min(current.sec)+' tracked in this situation</small></div><span class="intel-badge '+label.toLowerCase()+'">'+label+'</span></div>'+'<div class="intel-grid"><div><small>STATE NET</small><strong>'+(current.net>0?'+':'')+current.net+'</strong></div><div><small>PHASE</small><strong>'+clockPhase()+'</strong></div><div><small>SCORE</small><strong>'+state.team+'–'+state.opp+'</strong></div></div>'+'<div class="intel-history">'+(rows.length?rows.map(([k,e])=>{let parts=k.split('||'),five=parts[0].split('|').map(id=>p(id)?.name||'—').join(' · '),n=e.net>0?'+'+e.net:String(e.net);return '<div class="intel-row"><div><strong>'+parts[1]+'</strong><small>'+five+'</small></div><span>'+n+'</span></div>'}).join(''):'<div class="muted">Rotation IQ will learn which lineups perform in different game situations.</div>')+'</div>'}
 function render(){clock();lineup();roster();minutes();timeline();recommend();coachNow();plan();renderTactical();renderClosing();renderChemistry();document.querySelectorAll('#modeSwitch button').forEach(b=>b.classList.toggle('active',b.dataset.mode===state.mode));document.getElementById('teamScore').textContent=state.team;document.getElementById('oppScore').textContent=state.opp;document.querySelectorAll('#statusFilter button').forEach(b=>b.classList.toggle('active',b.dataset.filter===filter))}
 function clock(){document.getElementById('clockDisplay').textContent=tm(state.remaining);document.getElementById('periodLabel').textContent='Q'+state.period;document.getElementById('clockToggle').textContent=state.remaining===0&&state.period<F[state.mode].periods?'Next quarter':state.running?'Pause':'Start'}
 function tags(x){return (x.hot?'<span class="tag hot">HOT</span>':'')+(x.foul?'<span class="tag foul">FOUL</span>':'')+(x.rest?'<span class="tag rest">REST</span>':'')}
