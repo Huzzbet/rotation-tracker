@@ -4,7 +4,7 @@ let state=load(),undoStack=[],redoStack=[],filter='all';
 if(!state.plan)state.plan='balanced'; if(!state.tactic)state.tactic='balanced'; if(!state.chemistry)state.chemistry={}; if(!state.opponent)state.opponent={press:false,zone:false,scoring:false,rebound:false,shooting:false,ballhandling:false};
 function fresh(){return {mode:'rep',period:1,remaining:600,running:false,team:0,opp:0,lineup:{1:'alvin',2:'tom',3:'archer',4:'ethan',5:'rodion'},roster:DEFAULT.map(x=>({id:x[0],name:x[1],positions:x[2],hot:false,rest:false,foul:false,on:0,stint:0,restSec:0})),timeline:[],plan:'balanced',tactic:'balanced',chemistry:{},opponent:{press:false,zone:false,scoring:false,rebound:false,shooting:false,ballhandling:false}}}
 function load(){try{let x=JSON.parse(localStorage.getItem(KEY));return x?x:fresh()}catch{return fresh()}}
-function save(){localStorage.setItem(KEY,JSON.stringify({...state,running:false}))}
+function save(){localStorage.setItem(KEY,JSON.stringify(state))}
 function fiveKey(lineup=state.lineup){return POS.map(pos=>lineup[pos]||'').join('|')}
 function chemistryEntry(key){if(!state.chemistry[key])state.chemistry[key]={sec:0,net:0,events:0,stints:0};let e=state.chemistry[key];if(e.events==null)e.events=e.uses||0;if(e.stints==null)e.stints=0;return e}
 function scoreBand(){let d=state.team-state.opp;return d>=6?'LEAD 6+':d>=3?'LEAD 3-5':d>=1?'LEAD 1-2':d<=-6?'TRAIL 6+':d<=-3?'TRAIL 3-5':d<=-1?'TRAIL 1-2':'TIED'}
