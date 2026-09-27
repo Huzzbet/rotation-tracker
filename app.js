@@ -18,13 +18,58 @@ function structure(){let missing=POS.filter(x=>!state.lineup[x]),seen=new Set(),
 function tick(){if(!state.running)return;let now=Date.now(),d=Math.min(2,(now-(state.lastTick||now))/1000);state.lastTick=now;state.remaining=Math.max(0,state.remaining-d);state.roster.forEach(x=>court(x.id)?(x.on+=d,x.stint+=d):(x.restSec+=d));if(state.remaining<=0){state.running=false;toast(state.period===F[state.mode].periods?'Final siren':'End of period')}save();render()}
 function toggleClock(){state.running=!state.running;state.lastTick=Date.now();save();render()}
 function nextQ(){if(state.period>=F[state.mode].periods)return;act(()=>{state.period++;state.remaining=periodSec();state.running=false;state.roster.forEach(x=>x.stint=0)})}
-function rec(){let best=null,avg=state.roster.reduce((a,x)=>a+x.on,0)/state.roster.length;state.roster.filter(x=>court(x.id)).forEach(out=>{POS.forEach(pos=>{if(state.lineup[pos]!==out.id)return;state.roster.filter(x=>!court(x.id)&&x.positions.includes(pos)).forEach(i=>{let s=0,r=[];if(i.hot){s+=18;r.push('HOT hand')}if(i.rest){s+=22;r.push('fresh')}if(out.rest){s+=30;r.push('REST requested')}if(out.foul){s+=24;r.push('foul protection')}if(out.hot)s-=28;if(Math.abs(i.on-out.on)>90){s+=12;r.push('minutes balance')}
-if(state.plan==='hot'&&i.hot){s+=20;r.push('hot-hand plan')}if(state.plan==='hot'&&out.hot)s-=18;if(state.plan==='foul'&&out.foul){s+=18;r.push('foul plan')}if(state.plan==='protect'){if(i.foul)s-=18;if(i.on<avg)s+=7;r.push('workload protection')}if(state.plan==='chase'&&i.hot){s+=12;r.push('scoring option')}if(state.plan==='chase'&&i.on<avg)s+=5;s+=Math.min(15,i.restSec/60*1.2)-Math.min(12,i.stint/60);if(!best||s>best.s)best={s,in:i.id,out:out.id,pos:pos,r:r}})})});return best}
+function rec(){let best=null,avg=state.roster.reduce((a,x)=>a+x.on,0)/state.roster.length;state.roster.filter(x=>court(x.id)).forEach(out=>{POS.forEach(pos=>{if(state.lineup[pos]!==out.id)return;state.roster.filter(x=>!court(x.id)&&x.positions.includes(pos)).forEach(i=>{let s=0,r=[];if(i.hot){s+=20;r.push('HOT hand')}if(i.rest){s+=22;r.push('fresh')}if(out.rest){s+=30;r.push('REST requested')}if(out.foul){s+=24;r.push('foul protection')}if(out.hot)s-=45;if(Math.abs(i.on-out.on)>90){s+=12;r.push('minutes balance')}
+if(state.plan==='hot'&&i.hot){s+=25;r.push('hot-hand plan')}if(state.plan==='hot'&&out.hot){s-=30;r.push('keep HOT player on court')}if(state.plan==='foul'&&out.foul){s+=18;r.push('foul plan')}if(state.plan==='protect'){if(i.foul)s-=18;if(i.on<avg)s+=7;r.push('workload protection')}if(state.plan==='chase'&&i.hot){s+=12;r.push('scoring option')}if(state.plan==='chase'&&i.on<avg)s+=5;s+=Math.min(15,i.restSec/60*1.2)-Math.min(12,i.stint/60);if(!best||s>best.s)best={s,in:i.id,out:out.id,pos:pos,r:r}})})});return best}
 function sub(outId,inId,pos,source){let o=p(outId),i=p(inId);if(!o||!i||!i.positions.includes(pos))return;state.lineup[pos]=inId;o.stint=0;i.stint=0;i.rest=false;state.timeline.push({q:state.period,t:state.remaining,out:outId,in:inId,pos:pos,source:source||'Coach'});if(state.timeline.length>60)state.timeline.shift()}
 function applyRec(){let r=rec();if(!r)return toast('No clean positional rotation');act(()=>sub(r.out,r.in,r.pos,'Coach assistant'))}
 function manual(id){let i=p(id),best=null;i.positions.forEach(pos=>{if(!state.lineup[pos])return;let o=p(state.lineup[pos]),s=(o.rest?30:0)+(o.foul?20:0)-(o.hot?30:0)+Math.max(0,5-o.stint/60);if(!best||s>best.s)best={s,out:o.id,pos:pos}});if(!best)return toast('No safe positional replacement');act(()=>sub(best.out,id,best.pos,'Coach'))}
 function status(id,k){act(()=>{let x=p(id);x[k]=!x[k];if(k==='rest'&&x.rest)x.stint=0})}
 function score(team,d){act(()=>state[team==='team'?'team':'opp']=Math.max(0,state[team==='team'?'team':'opp']+d))}
+function closingFive(){
+  let best=null;
+  function walk(pos,used,lineup,total){
+    if(pos>5){if(!best||total>best.score)best={score:total,lineup:{...lineup}};return}
+    state.roster.filter(x=>!used.has(x.id)&&x.positions.includes(pos)).forEach(x=>{
+      let s=100;
+      if(court(x.id))s+=8;
+      if(x.hot){s+=25;if(state.plan==='hot'||state.plan==='chase')s+=15}
+      if(x.foul)s-=40;
+      if(x.rest)s-=25;
+      s+=Math.min(15,x.restSec/60*1.5);
+      if(state.plan==='protect'&&x.foul)s-=20;
+      if(state.plan==='protect'&&x.on<state.roster.reduce((a,q)=>a+q.on,0)/state.roster.length)s+=5;
+      if(state.plan==='chase'&&x.on<state.roster.reduce((a,q)=>a+q.on,0)/state.roster.length)s+=6;
+      lineup[pos]=x.id;used.add(x.id);walk(pos+1,used,lineup,total+s);used.delete(x.id);delete lineup[pos];
+    });
+  }
+  walk(1,new Set(),{},0);
+  return best;
+}
+function applyClosing(){
+  let c=closingFive();
+  if(!c)return toast('No valid closing five is available');
+  act(()=>{
+    POS.forEach(pos=>{
+      let next=c.lineup[pos],out=state.lineup[pos];
+      if(next===out)return;
+      if(out&&p(out))p(out).stint=0;
+      if(next&&p(next)){p(next).stint=0;p(next).rest=false}
+      state.lineup[pos]=next;
+      if(out&&next)state.timeline.push({q:state.period,t:state.remaining,out:out,in:next,pos:pos,source:'Closing five'});
+    });
+    if(state.timeline.length>60)state.timeline=state.timeline.slice(-60);
+  });
+  toast('Closing five applied');
+}
+function renderClosing(){
+  let el=document.getElementById('closingFive'),c=closingFive();
+  if(!el)return;
+  if(!c){el.innerHTML='<div class="muted">No valid five-player positional combination is available.</div>';return}
+  let changed=POS.filter(pos=>state.lineup[pos]!==c.lineup[pos]).length;
+  el.innerHTML=POS.map(pos=>'<div class="closing-player"><span class="closing-pos">'+PN[pos]+'</span><strong>'+p(c.lineup[pos]).name+'</strong><span class="closing-tags">'+tags(p(c.lineup[pos]))+'</span></div>').join('')+
+    '<div class="closing-footer"><span>'+changed+' change'+(changed===1?'':'s')+' from current five</span><button class="secondary-btn" id="applyClosing">Apply closing 5</button></div>';
+  document.getElementById('applyClosing').onclick=applyClosing;
+}
 function plan(){document.querySelectorAll('#planSwitch button').forEach(b=>b.classList.toggle('active',b.dataset.plan===state.plan));let d=state.team-state.opp,txt={balanced:'Prioritise clean positional structure and sustainable minutes.',protect:'Protect the lead: favour workload balance and reduce unnecessary risk to players in foul trouble.',chase:'Chase the game: favour fresh players and tagged HOT options while keeping positional structure.',hot:'Hot hand: give explicit HOT tags extra weight, but never override the coach.',foul:'Foul trouble: protect players carrying a FOUL tag and use safe positional replacements.'}[state.plan];document.getElementById('planInsight').innerHTML='<strong>'+txt+'</strong><span>Score '+state.team+'–'+state.opp+' · '+(d>0?'leading by '+d:d<0?'trailing by '+Math.abs(d):'game level')+'</span>';let choices=[];let tempState=snap();for(let n=0;n<3;n++){let r=rec();if(!r)break;choices.push(r);state.lineup[r.pos]=r.in}state=tempState;document.getElementById('nextRotations').innerHTML=choices.length?choices.map((r,i)=>'<div class="next-rotation"><span class="next-number">'+(i+1)+'</span><div><strong>'+p(r.in).name+' for '+p(r.out).name+'</strong><small>'+PN[r.pos]+' · '+(r.r[0]||'structure preserved')+'</small></div></div>').join(''):'<div class="muted">No three-step positional plan is available yet.</div>'}
 function render(){clock();lineup();roster();minutes();timeline();recommend();plan();document.querySelectorAll('#modeSwitch button').forEach(b=>b.classList.toggle('active',b.dataset.mode===state.mode));document.getElementById('teamScore').textContent=state.team;document.getElementById('oppScore').textContent=state.opp;document.querySelectorAll('#statusFilter button').forEach(b=>b.classList.toggle('active',b.dataset.filter===filter))}
 function clock(){document.getElementById('clockDisplay').textContent=tm(state.remaining);document.getElementById('periodLabel').textContent='Q'+state.period;document.getElementById('clockToggle').textContent=state.remaining===0&&state.period<F[state.mode].periods?'Next quarter':state.running?'Pause':'Start'}
