@@ -7,6 +7,7 @@
   <meta name="description" content="Rotation IQ — a positional basketball rotation coach for live games." />
   <title>Rotation IQ — Basketball Rotation Coach</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="manifest" href="manifest.json" />
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -91,6 +92,22 @@
           <span>Structure first</span><span>•</span><span>Coach overrides</span><span>•</span><span>Minutes aware</span>
         </div>
       </aside>
+
+      <section class="plan-card card">
+        <div class="section-head">
+          <div><span class="eyebrow">GAME PLAN</span><h2>What matters right now?</h2></div>
+          <span class="muted">Coach chooses the priority</span>
+        </div>
+        <div class="plan-switch" id="planSwitch">
+          <button data-plan="balanced" class="active">Balanced</button>
+          <button data-plan="protect">Protect lead</button>
+          <button data-plan="chase">Chase game</button>
+          <button data-plan="hot">Hot hand</button>
+          <button data-plan="foul">Foul trouble</button>
+        </div>
+        <div id="planInsight" class="plan-insight"></div>
+        <div id="nextRotations" class="next-rotations"></div>
+      </section>
 
       <section class="bench-card card">
         <div class="section-head">
