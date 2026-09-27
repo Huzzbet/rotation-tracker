@@ -51,8 +51,38 @@ function tm(s){s=Math.max(0,Math.ceil(s));return String(Math.floor(s/60)).padSta
 function min(s){return Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0')}
 function periodSec(){return F[state.mode].sec}
 function structure(){let missing=POS.filter(x=>!state.lineup[x]),seen=new Set(),dupes=[],invalid=[];Object.values(state.lineup).forEach(id=>seen.has(id)?dupes.push(id):seen.add(id));POS.forEach(x=>{let q=p(state.lineup[x]);if(q&&!q.positions.includes(x))invalid.push(q.name+' at '+PN[x])});return {missing,dupes,invalid,clean:!missing.length&&!dupes.length&&!invalid.length}}
-function tick(){if(!state.running)return;let now=Date.now(),d=Math.min(2,(now-(state.lastTick||now))/1000);state.lastTick=now;state.remaining=Math.max(0,state.remaining-d);trackChemistry(d);state.roster.forEach(x=>court(x.id)?(x.on+=d,x.stint+=d):(x.restSec+=d));if(state.remaining<=0){state.running=false;toast(state.period===F[state.mode].periods?'Final siren':'End of period')}save();render()}
-function toggleClock(){state.running=!state.running;state.lastTick=Date.now();save();render()}
+function tick(){
+  if(!state.running)return;
+  const now=Date.now();
+  if(!state.lastTick)state.lastTick=now;
+  const d=Math.max(0,Math.min(1,(now-state.lastTick)/1000));
+  if(d<0.05)return;
+  state.lastTick=now;
+  state.remaining=Math.max(0,state.remaining-d);
+  trackChemistry(d);
+  state.roster.forEach(x=>court(x.id)?(x.on+=d,x.stint+=d):(x.restSec+=d));
+  if(state.remaining<=0){
+    state.remaining=0;
+    state.running=false;
+    state.lastTick=null;
+    toast(state.period===F[state.mode].periods?'Final siren':'End of period');
+  }
+  render();
+  save();
+}
+function toggleClock(){
+  if(state.remaining<=0&&state.period<F[state.mode].periods){nextQ();return;}
+  if(state.running){
+    tick();
+    state.running=false;
+    state.lastTick=null;
+  }else{
+    state.running=true;
+    state.lastTick=Date.now();
+  }
+  save();
+  render();
+}
 function nextQ(){if(state.period>=F[state.mode].periods)return;act(()=>{state.period++;state.remaining=periodSec();state.running=false;state.roster.forEach(x=>x.stint=0)})}
 function opponentWeight(x){
   let o=state.opponent||{},s=0,r=[];
@@ -225,6 +255,6 @@ function newGame(){if(!confirm('Start a new game? Current game data will be clea
 function resetMinutes(){act(()=>state.roster.forEach(x=>{x.on=0;x.stint=0;x.restSec=0}))}
 function setup(){let root=document.getElementById('modalRoot'),rows=state.roster.map(x=>'<div class="setup-row" data-id="'+x.id+'"><div class="field"><label>Name</label><input data-name value="'+x.name.replace(/"/g,'&quot;')+'"></div><div class="field"><label>Natural positions</label><div class="position-picks">'+POS.map(y=>'<button type="button" data-pos="'+y+'" class="'+(x.positions.includes(y)?'active':'')+'">'+PN[y]+'</button>').join('')+'</div></div></div>').join('');root.innerHTML='<div class="modal-backdrop"><div class="modal"><div class="modal-head"><h2>Team setup</h2><button class="icon-btn" id="closeSetup">×</button></div><div class="modal-body"><p class="muted">Edit names and natural positions. The engine uses these positions to preserve structure.</p>'+rows+'<div class="modal-actions"><button class="secondary-btn" id="cancelSetup">Cancel</button><button class="primary-btn" id="saveSetup">Save team</button></div></div></div></div>';root.querySelectorAll('[data-pos]').forEach(b=>b.onclick=()=>b.classList.toggle('active'));document.getElementById('closeSetup').onclick=()=>root.innerHTML='';document.getElementById('cancelSetup').onclick=()=>root.innerHTML='';document.getElementById('saveSetup').onclick=saveSetup}
 function saveSetup(){act(()=>document.querySelectorAll('.setup-row').forEach(row=>{let x=p(row.dataset.id);x.name=row.querySelector('[data-name]').value.trim()||x.name;let pos=[...row.querySelectorAll('[data-pos].active')].map(b=>+b.dataset.pos);if(pos.length)x.positions=pos}));document.getElementById('modalRoot').innerHTML='';toast('Team setup saved')}
-function bind(){document.getElementById('undoBtn').onclick=undo;document.getElementById('redoBtn').onclick=redo;document.getElementById('newGameBtn').onclick=newGame;document.getElementById('setupBtn').onclick=setup;document.getElementById('clockToggle').onclick=()=>state.remaining===0&&state.period<F[state.mode].periods?nextQ():toggleClock();document.getElementById('clockReset').onclick=()=>act(()=>{state.running=false;state.remaining=periodSec()});document.getElementById('applyRecommendation').onclick=applyRec;document.getElementById('resetMinutesBtn').onclick=resetMinutes;document.querySelectorAll('#planSwitch button').forEach(b=>b.onclick=()=>act(()=>{state.plan=b.dataset.plan}));document.querySelectorAll('#tacticalSwitch button').forEach(b=>b.onclick=()=>act(()=>{state.tactic=b.dataset.tactic}));document.querySelectorAll('#modeSwitch button').forEach(b=>b.onclick=()=>act(()=>{state.mode=b.dataset.mode;state.period=1;state.remaining=F[state.mode].sec;state.running=false}));document.querySelectorAll('.score-controls button').forEach(b=>b.onclick=()=>score(b.dataset.score,+b.dataset.delta));document.getElementById('opponentBoard').onclick=e=>{let b=e.target.closest('[data-opponent]');if(b){act(()=>{state.opponent[b.dataset.opponent]=!state.opponent[b.dataset.opponent]});return}};document.getElementById('statusFilter').onclick=e=>{let b=e.target.closest('button');if(b){filter=b.dataset.filter;render()}};document.getElementById('rosterGrid').onclick=e=>{let b=e.target.closest('[data-status]');if(b){status(b.dataset.id,b.dataset.status);return}b=e.target.closest('[data-sub]');if(b)manual(b.dataset.sub)};window.onkeydown=e=>{if((e.metaKey||e.ctrlKey)&&e.key==='z'){e.preventDefault();undo()}if(e.code==='Space'&&document.activeElement.tagName!=='INPUT'){e.preventDefault();toggleClock()}}}
+function bind(){document.getElementById('undoBtn').onclick=undo;document.getElementById('redoBtn').onclick=redo;document.getElementById('newGameBtn').onclick=newGame;document.getElementById('setupBtn').onclick=setup;document.getElementById('clockToggle').onclick=()=>state.remaining===0&&state.period<F[state.mode].periods?nextQ():toggleClock();document.getElementById('clockReset').onclick=()=>act(()=>{state.running=false;state.lastTick=null;state.remaining=periodSec()});document.getElementById('applyRecommendation').onclick=applyRec;document.getElementById('resetMinutesBtn').onclick=resetMinutes;document.querySelectorAll('#planSwitch button').forEach(b=>b.onclick=()=>act(()=>{state.plan=b.dataset.plan}));document.querySelectorAll('#tacticalSwitch button').forEach(b=>b.onclick=()=>act(()=>{state.tactic=b.dataset.tactic}));document.querySelectorAll('#modeSwitch button').forEach(b=>b.onclick=()=>act(()=>{state.mode=b.dataset.mode;state.period=1;state.remaining=F[state.mode].sec;state.running=false}));document.querySelectorAll('.score-controls button').forEach(b=>b.onclick=()=>score(b.dataset.score,+b.dataset.delta));document.getElementById('opponentBoard').onclick=e=>{let b=e.target.closest('[data-opponent]');if(b){act(()=>{state.opponent[b.dataset.opponent]=!state.opponent[b.dataset.opponent]});return}};document.getElementById('statusFilter').onclick=e=>{let b=e.target.closest('button');if(b){filter=b.dataset.filter;render()}};document.getElementById('rosterGrid').onclick=e=>{let b=e.target.closest('[data-status]');if(b){status(b.dataset.id,b.dataset.status);return}b=e.target.closest('[data-sub]');if(b)manual(b.dataset.sub)};window.onkeydown=e=>{if((e.metaKey||e.ctrlKey)&&e.key==='z'){e.preventDefault();undo()}if(e.code==='Space'&&document.activeElement.tagName!=='INPUT'){e.preventDefault();toggleClock()}}}
 bind();render();setInterval(tick,250);
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}
