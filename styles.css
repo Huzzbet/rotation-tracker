@@ -20,3 +20,22 @@
 .tactical-card{grid-column:1/-1}.tactical-switch{display:flex;gap:7px;flex-wrap:wrap;padding:0 20px 12px}.tactical-switch button{border:1px solid var(--border);background:#091523;color:#8194ac;border-radius:9px;padding:9px 12px;font-size:11px;font-weight:850}.tactical-switch button.active{background:#1b3550;color:#f5f8fb;border-color:#416789}.tactical-five{padding:0 20px 20px;display:grid;grid-template-columns:repeat(5,1fr);gap:7px}.tactical-label{grid-column:1/-1;color:var(--accent);font-size:9px;font-weight:900;letter-spacing:.12em;margin-bottom:1px}.tactical-player{background:#0a1726;border:1px solid var(--border);border-radius:11px;padding:10px;text-align:center}.tactical-player>span{display:block;color:#6e839d;font-size:8px;font-weight:900}.tactical-player strong{display:block;font-size:11px;margin:5px 0}.tactical-player .tag{font-size:7px}.tactical-footer{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;color:#71859f;font-size:9px}.tactical-footer button{padding:7px 9px;font-size:9px}@media(max-width:700px){.tactical-five{grid-template-columns:repeat(5,minmax(0,1fr));padding:0 10px 12px}.tactical-player{padding:8px 2px}.tactical-player strong{font-size:8px}.tactical-footer{flex-direction:column;align-items:stretch;gap:7px}.tactical-footer button{width:100%}}
 
 .chemistry-card{grid-column:1/-1}.chemistry-board{padding:0 20px 20px}.chem-current{display:grid;grid-template-columns:1fr auto auto;gap:16px;align-items:center;background:#091624;border:1px solid var(--border);border-radius:13px;padding:13px}.chem-current strong{font-size:11px;line-height:1.45}.chem-badge{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:999px;padding:6px 8px;font-size:8px;font-weight:950;letter-spacing:.06em;white-space:nowrap}.chem-badge.strong{color:var(--accent);border-color:rgba(94,231,168,.28);background:rgba(94,231,168,.08)}.chem-badge.building{color:#a9c8ff;border-color:rgba(104,167,255,.25);background:rgba(104,167,255,.08)}.chem-badge.watch{color:#ffd59a;border-color:rgba(255,207,102,.25);background:rgba(255,207,102,.08)}.chem-badge.new{color:#a6b5c8}.chem-stat{text-align:right}.chem-stat b{display:block;font-size:11px}.chem-stat small{display:block;color:#6f849d;font-size:8px;margin-top:3px}.chem-history{display:grid;gap:6px;margin-top:8px}.chem-row{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#0a1726;border:1px solid var(--border);border-radius:11px;padding:10px 12px}.chem-row strong{display:block;font-size:10px}.chem-row small{display:block;color:#71859f;font-size:8px;margin-top:3px}.chem-empty{padding:10px 0}@media(max-width:700px){.chem-current{grid-template-columns:1fr auto}.chem-stat{grid-column:1/-1;text-align:left}.chemistry-board{padding:0 10px 12px}.chem-row{align-items:flex-start;flex-direction:column}}
+
+.game-intelligence{display:grid;gap:10px;padding:0 14px 14px}
+.intel-current{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#0a1726;border:1px solid var(--border);border-radius:13px;padding:12px}
+.intel-current strong{display:block;font-size:13px;margin-top:4px}
+.intel-current small{display:block;color:#71859f;font-size:8px;margin-top:4px}
+.intel-badge{border:1px solid var(--border);border-radius:999px;padding:6px 9px;font-size:8px;font-weight:950;letter-spacing:.08em}
+.intel-badge.working{color:var(--accent);background:rgba(94,231,168,.08)}
+.intel-badge.watch{color:#ffd59a;background:rgba(255,207,102,.08)}
+.intel-badge.learning{color:#a9c8ff;background:rgba(104,167,255,.08)}
+.intel-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.intel-grid>div{background:#091522;border:1px solid var(--border);border-radius:10px;padding:9px}
+.intel-grid small{display:block;color:#6f849d;font-size:7px;font-weight:900;letter-spacing:.08em}
+.intel-grid strong{display:block;font-size:12px;margin-top:4px}
+.intel-history{display:grid;gap:6px}
+.intel-row{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#0a1726;border:1px solid var(--border);border-radius:10px;padding:9px 11px}
+.intel-row strong{display:block;font-size:9px}
+.intel-row small{display:block;color:#71859f;font-size:8px;margin-top:3px}
+.intel-row>span{font-weight:950;font-size:11px}
+@media(max-width:700px){.intel-grid{grid-template-columns:1fr 1fr}.intel-grid>div:last-child{grid-column:1/-1}}
