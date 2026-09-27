@@ -562,3 +562,67 @@ body:before{
   .minute-row{grid-template-columns:90px 1fr 44px 40px;gap:7px}
   .timeline{padding-left:13px;padding-right:13px}
 }
+
+/* =========================================================
+   LIVE COMMAND CENTRE — courtside broadcast layer
+   ========================================================= */
+.game-strip{padding-top:43px;position:relative}
+.game-livebar{
+  position:absolute;left:0;right:0;top:0;height:31px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 14px 0 17px;
+  border-bottom:1px solid rgba(255,255,255,.045);
+  background:rgba(3,9,16,.35);
+  font-size:8px;font-weight:900;letter-spacing:.13em;
+}
+.live-status{color:#75efb5;display:flex;align-items:center;gap:7px}
+.pulse{width:6px;height:6px;border-radius:50%;background:#70efb3;box-shadow:0 0 0 4px rgba(112,239,179,.08),0 0 14px #70efb3;animation:livePulse 1.7s infinite}
+@keyframes livePulse{50%{opacity:.55;transform:scale(.82)}}
+.live-context{display:flex;gap:8px;color:#72859b}
+.live-context span:first-child{color:#d9e6f0}
+.game-command{
+  grid-column:1/-1;
+  display:grid;
+  grid-template-columns:minmax(260px,1.4fr) minmax(250px,.9fr) minmax(260px,.8fr);
+  gap:18px;align-items:center;
+  padding:18px 21px;
+  background:
+    radial-gradient(500px 180px at 0 0,rgba(111,240,180,.075),transparent 70%),
+    linear-gradient(110deg,rgba(13,27,44,.98),rgba(7,15,26,.98));
+}
+.command-label{font-size:8px;font-weight:900;letter-spacing:.2em;color:#71859d;margin-bottom:5px}
+.command-title{font-size:19px;font-weight:950;letter-spacing:-.04em}
+.command-sub{font-size:9px;color:#8195aa;margin-top:4px;line-height:1.45;max-width:560px}
+.command-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.command-stats div{
+  padding:10px 11px;border-radius:11px;background:rgba(255,255,255,.025);
+  border:1px solid rgba(255,255,255,.055);
+}
+.command-stats span,.momentum-head{font-size:7px;letter-spacing:.13em;font-weight:900;color:#61758d}
+.command-stats strong{display:block;margin-top:5px;font-size:14px;font-variant-numeric:tabular-nums}
+.momentum-wrap{padding:0 3px}
+.momentum-head{display:flex;justify-content:space-between;margin-bottom:7px}
+.momentum-head span:last-child{color:#9eb2c5}
+.momentum-track{height:8px;border-radius:99px;background:#050d17;border:1px solid rgba(255,255,255,.055);overflow:hidden;position:relative}
+.momentum-track:before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(255,255,255,.17)}
+.momentum-track>span{
+  display:block;height:100%;width:50%;border-radius:99px;
+  background:linear-gradient(90deg,#ff806b 0%,#ffd166 50%,#6ff0b4 100%);
+  box-shadow:0 0 16px rgba(111,240,180,.13);
+  transition:width .3s ease;
+}
+@media(max-width:1000px){
+ .game-command{grid-template-columns:1fr 1fr}
+ .momentum-wrap{grid-column:1/-1}
+}
+@media(max-width:700px){
+ .game-strip{padding-top:43px}
+ .game-livebar{padding:0 10px}
+ .live-context{gap:5px}
+ .game-command{padding:14px;grid-template-columns:1fr 1fr;gap:10px}
+ .command-title{font-size:16px}
+ .command-sub{font-size:8px}
+ .command-stats{gap:5px}
+ .command-stats div{padding:8px}
+ .momentum-wrap{grid-column:1/-1}
+}
