@@ -10,3 +10,9 @@
 .closing-footer{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:9px;color:#71859f;font-size:9px}
 .closing-footer button{padding:6px 8px;font-size:9px}
 @media(max-width:700px){.closing-five{grid-template-columns:repeat(5,minmax(0,1fr))}.closing-player{padding:7px 2px}.closing-player strong{font-size:8px}.closing-footer{align-items:flex-start;flex-direction:column}.closing-footer button{width:100%}}
+
+.coach-now{margin:0 20px 14px;padding:13px 14px;border:1px solid rgba(94,231,168,.18);border-radius:13px;background:linear-gradient(135deg,rgba(17,45,48,.7),#091624)}
+.coach-now-badge{display:inline-block;color:var(--accent);font-size:8px;font-weight:950;letter-spacing:.14em;margin-bottom:6px}
+.coach-now-title{font-size:15px;font-weight:900;letter-spacing:-.02em}
+.coach-now-body{color:#a8b8ca;font-size:11px;line-height:1.45;margin-top:5px}
+.coach-now-footer{display:flex;justify-content:space-between;gap:8px;margin-top:10px;color:#657b95;font-size:8px;font-weight:800}
