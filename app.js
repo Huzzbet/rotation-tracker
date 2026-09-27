@@ -1,10 +1,26 @@
 const KEY='rotationIQ.v2', POS=[1,2,3,4,5], PN={1:'PG',2:'SG',3:'SF',4:'PF',5:'C'}, F={rep:{periods:4,sec:600},domestic:{periods:2,sec:1080}};
 const DEFAULT=[['rodion','Rodion',[4,5]],['jacob','Jacob',[4,5]],['archer','Archer',[2,3]],['max','Max',[2,3]],['bill','Bill',[1,2,3,4]],['alvin','Alvin',[1,2,3]],['ethan','Ethan',[3,4]],['tom','Tom',[1,2,3]],['tate','Tate',[2,3,4]]];
 let state=load(),undoStack=[],redoStack=[],filter='all';
-if(!state.plan)state.plan='balanced'; if(!state.tactic)state.tactic='balanced';
+if(!state.plan)state.plan='balanced'; if(!state.tactic)state.tactic='balanced'; if(!state.chemistry)state.chemistry={};
 function fresh(){return {mode:'rep',period:1,remaining:600,running:false,team:0,opp:0,lineup:{1:'alvin',2:'tom',3:'archer',4:'ethan',5:'rodion'},roster:DEFAULT.map(x=>({id:x[0],name:x[1],positions:x[2],hot:false,rest:false,foul:false,on:0,stint:0,restSec:0})),timeline:[],tactic:'balanced'}}
 function load(){try{let x=JSON.parse(localStorage.getItem(KEY));return x?x:fresh()}catch{return fresh()}}
 function save(){localStorage.setItem(KEY,JSON.stringify({...state,running:false}))}
+function fiveKey(lineup=state.lineup){return POS.map(pos=>lineup[pos]||'').join('|')}
+function chemistryEntry(key){if(!state.chemistry[key])state.chemistry[key]={sec:0,net:0,uses:0};return state.chemistry[key]}
+function trackChemistry(seconds){
+  if(seconds<=0)return;
+  let e=chemistryEntry(fiveKey()); e.sec+=seconds;
+}
+function chemistryScore(lineup=state.lineup){
+  let e=state.chemistry[fiveKey(lineup)]; if(!e)return 0;
+  return Math.max(-5,Math.min(5,e.net/5));
+}
+function chemistryLabel(lineup=state.lineup){
+  let e=state.chemistry[fiveKey(lineup)];
+  if(!e||e.sec<30)return {label:'NEW UNIT',cls:'new'};
+  let score=chemistryScore(lineup);
+  return score>=2?{label:'STRONG',cls:'strong'}:score<=-2?{label:'WATCH',cls:'watch'}:{label:'BUILDING',cls:'building'};
+}
 function snap(){return JSON.parse(JSON.stringify({...state,running:false}))}
 function act(fn){undoStack.push(snap());if(undoStack.length>50)undoStack.shift();redoStack=[];fn();save();render()}
 function undo(){if(!undoStack.length)return;redoStack.push(snap());state=undoStack.pop();save();render();toast('Undone')}
@@ -15,16 +31,22 @@ function tm(s){s=Math.max(0,Math.ceil(s));return String(Math.floor(s/60)).padSta
 function min(s){return Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0')}
 function periodSec(){return F[state.mode].sec}
 function structure(){let missing=POS.filter(x=>!state.lineup[x]),seen=new Set(),dupes=[],invalid=[];Object.values(state.lineup).forEach(id=>seen.has(id)?dupes.push(id):seen.add(id));POS.forEach(x=>{let q=p(state.lineup[x]);if(q&&!q.positions.includes(x))invalid.push(q.name+' at '+PN[x])});return {missing,dupes,invalid,clean:!missing.length&&!dupes.length&&!invalid.length}}
-function tick(){if(!state.running)return;let now=Date.now(),d=Math.min(2,(now-(state.lastTick||now))/1000);state.lastTick=now;state.remaining=Math.max(0,state.remaining-d);state.roster.forEach(x=>court(x.id)?(x.on+=d,x.stint+=d):(x.restSec+=d));if(state.remaining<=0){state.running=false;toast(state.period===F[state.mode].periods?'Final siren':'End of period')}save();render()}
+function tick(){if(!state.running)return;let now=Date.now(),d=Math.min(2,(now-(state.lastTick||now))/1000);state.lastTick=now;state.remaining=Math.max(0,state.remaining-d);trackChemistry(d);state.roster.forEach(x=>court(x.id)?(x.on+=d,x.stint+=d):(x.restSec+=d));if(state.remaining<=0){state.running=false;toast(state.period===F[state.mode].periods?'Final siren':'End of period')}save();render()}
 function toggleClock(){state.running=!state.running;state.lastTick=Date.now();save();render()}
 function nextQ(){if(state.period>=F[state.mode].periods)return;act(()=>{state.period++;state.remaining=periodSec();state.running=false;state.roster.forEach(x=>x.stint=0)})}
 function rec(){let best=null,avg=state.roster.reduce((a,x)=>a+x.on,0)/state.roster.length;state.roster.filter(x=>court(x.id)).forEach(out=>{POS.forEach(pos=>{if(state.lineup[pos]!==out.id)return;state.roster.filter(x=>!court(x.id)&&x.positions.includes(pos)).forEach(i=>{let s=0,r=[];if(i.hot){s+=20;r.push('HOT hand')}if(i.rest){s+=22;r.push('fresh')}if(out.rest){s+=30;r.push('REST requested')}if(out.foul){s+=24;r.push('foul protection')}if(out.hot)s-=45;if(Math.abs(i.on-out.on)>90){s+=12;r.push('minutes balance')}
 if(state.plan==='hot'&&i.hot){s+=25;r.push('hot-hand plan')}if(state.plan==='hot'&&out.hot){s-=30;r.push('keep HOT player on court')}if(state.plan==='foul'&&out.foul){s+=18;r.push('foul plan')}if(state.plan==='protect'){if(i.foul)s-=18;if(i.on<avg)s+=7;r.push('workload protection')}if(state.plan==='chase'&&i.hot){s+=12;r.push('scoring option')}if(state.plan==='chase'&&i.on<avg)s+=5;s+=Math.min(15,i.restSec/60*1.2)-Math.min(12,i.stint/60);if(!best||s>best.s)best={s,in:i.id,out:out.id,pos:pos,r:r}})})});return best}
-function sub(outId,inId,pos,source){let o=p(outId),i=p(inId);if(!o||!i||!i.positions.includes(pos))return;state.lineup[pos]=inId;o.stint=0;i.stint=0;i.rest=false;state.timeline.push({q:state.period,t:state.remaining,out:outId,in:inId,pos:pos,source:source||'Coach'});if(state.timeline.length>60)state.timeline.shift()}
+function sub(outId,inId,pos,source){let o=p(outId),i=p(inId);if(!o||!i||!i.positions.includes(pos))return;state.lineup[pos]=inId;o.stint=0;i.stint=0;i.rest=false;chemistryEntry(fiveKey()).uses++;state.timeline.push({q:state.period,t:state.remaining,out:outId,in:inId,pos:pos,source:source||'Coach'});if(state.timeline.length>60)state.timeline.shift()}
 function applyRec(){let r=rec();if(!r)return toast('No clean positional rotation');act(()=>sub(r.out,r.in,r.pos,'Coach assistant'))}
 function manual(id){let i=p(id),best=null;i.positions.forEach(pos=>{if(!state.lineup[pos])return;let o=p(state.lineup[pos]),s=(o.rest?30:0)+(o.foul?20:0)-(o.hot?30:0)+Math.max(0,5-o.stint/60);if(!best||s>best.s)best={s,out:o.id,pos:pos}});if(!best)return toast('No safe positional replacement');act(()=>sub(best.out,id,best.pos,'Coach'))}
 function status(id,k){act(()=>{let x=p(id);x[k]=!x[k];if(k==='rest'&&x.rest)x.stint=0})}
-function score(team,d){act(()=>state[team==='team'?'team':'opp']=Math.max(0,state[team==='team'?'team':'opp']+d))}
+function score(team,d){
+  act(()=>{
+    let key=fiveKey(),e=chemistryEntry(key);
+    state[team==='team'?'team':'opp']=Math.max(0,state[team==='team'?'team':'opp']+d);
+    e.net+=team==='team'?d:-d;e.uses++;
+  })
+}
 function tacticalFive(){
   let best=null, avg=state.roster.reduce((a,x)=>a+x.on,0)/state.roster.length;
   let weights={balanced:0,offense:0,defense:0};
