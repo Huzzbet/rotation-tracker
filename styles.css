@@ -651,3 +651,25 @@ body:before{
   .opponent-grid{grid-template-columns:repeat(2,1fr)}
   .opponent-flag{min-height:61px}
 }
+
+/* =========================================================
+   TIMEOUT MODE — coach huddle
+   ========================================================= */
+.timeout-card{grid-column:1/-1;background:radial-gradient(650px 220px at 0 0,rgba(92,168,255,.07),transparent 68%),linear-gradient(145deg,rgba(14,27,44,.98),rgba(7,15,26,.98))}
+.timeout-board{padding:0 20px 20px}
+.timeout-top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px;border:1px solid rgba(255,255,255,.06);border-radius:14px;background:rgba(4,12,21,.62)}
+.timeout-top strong{display:block;font-size:16px;margin-top:3px}
+.timeout-top small{display:block;color:#71859b;font-size:9px;margin-top:3px}
+.timeout-top button{white-space:nowrap}
+.timeout-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.timeout-grid>div{padding:12px;border:1px solid rgba(255,255,255,.05);border-radius:12px;background:rgba(255,255,255,.025)}
+.timeout-grid span{display:block;color:#62768d;font-size:7px;font-weight:900;letter-spacing:.13em}
+.timeout-grid strong{display:block;margin-top:5px;font-size:11px}
+.timeout-grid small{display:block;margin-top:4px;color:#71859b;font-size:8px;line-height:1.4}
+.jersey-number{display:inline-flex;align-items:center;justify-content:center;min-width:23px;height:18px;margin-right:3px;border-radius:6px;background:rgba(92,168,255,.1);color:#9fc6f0;font-size:8px;font-weight:900;vertical-align:1px}
+@media(max-width:700px){
+ .timeout-board{padding:0 13px 14px}
+ .timeout-top{display:block}
+ .timeout-top button{width:100%;margin-top:10px}
+ .timeout-grid{grid-template-columns:1fr}
+}
