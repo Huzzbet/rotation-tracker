@@ -802,3 +802,23 @@ body:before{
   .sideline-score-actions{padding:0 13px 12px}
   .sideline-actions{grid-template-columns:1.4fr 1fr 1fr auto}
 }
+
+/* Player readiness */
+.readiness-row{margin-top:8px}
+.readiness-btn{
+  width:100%;border:1px solid rgba(255,255,255,.07);background:#0b1929;
+  color:#8ea2b8;border-radius:7px;padding:6px 5px;font-size:8px;font-weight:900;
+  letter-spacing:.04em;text-align:left
+}
+.readiness-btn.ready{color:#73e5b0;border-color:rgba(94,231,168,.18);background:rgba(94,231,168,.045)}
+.readiness-btn.fresh{color:#8be6c0}
+.readiness-btn.hot{color:#ff9d89;border-color:rgba(255,123,98,.2);background:rgba(255,123,98,.05)}
+.readiness-btn.limited{color:#ffd77e;border-color:rgba(255,207,102,.2);background:rgba(255,207,102,.045)}
+.readiness-btn.out{color:#ff8794;border-color:rgba(255,111,125,.25);background:rgba(255,111,125,.05)}
+.readiness-btn.rest,.readiness-btn.long{color:#b3c0ce}
+.tag.readiness{color:#91a8c1;background:#13263a}
+.tag.readiness.ready{color:#8be8bd;background:rgba(94,231,168,.09)}
+.tag.readiness.hot{color:#ffae9b;background:rgba(255,123,98,.1)}
+.tag.readiness.limited{color:#ffdb87;background:rgba(255,207,102,.1)}
+.tag.readiness.out{color:#ff9ca7;background:rgba(255,111,125,.1)}
+.tag.readiness.long{color:#c0cad5;background:#172535}
