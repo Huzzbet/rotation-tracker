@@ -677,3 +677,102 @@ body:before{
 .quick-sub-modal{width:min(560px,100%)}.quick-sub-list{display:grid;gap:8px;margin-top:14px}.quick-sub-player{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;padding:13px 14px;border:1px solid var(--border);border-radius:12px;background:#091624;color:var(--text);cursor:pointer}.quick-sub-player:hover{border-color:#4776aa;background:#102238}.quick-sub-player strong{display:block;font-size:12px}.quick-sub-player small{display:block;color:var(--muted);font-size:10px;margin-top:3px}.quick-sub-tags{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}.position-slot .player-chip[role=button]{cursor:pointer;transition:transform .15s,border-color .15s,background .15s}.position-slot .player-chip[role=button]:hover,.position-slot .player-chip[role=button]:focus{transform:translateY(-2px);border-color:#5a8bbb;outline:none}.position-slot .player-chip[role=button] small{color:#6fdbb0}
 .finish-btn{border-color:#7f5b4d;color:#ffd5c6}.history-card{grid-column:1/-1}.history-board{padding:0 20px 20px;display:grid;gap:8px}.history-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:12px;padding:12px 14px;background:#091624;border:1px solid var(--border);border-radius:12px}.history-row strong{font-size:16px}.history-row small{display:block;color:var(--muted);font-size:10px;margin-top:3px}.history-row>div:nth-child(2){display:flex;gap:10px;color:#8ca0b8;font-size:10px}.game-summary{width:min(620px,100%)}.summary-result{display:inline-block;margin-top:5px;font-size:10px;font-weight:900;letter-spacing:.12em;color:#68e0b1}.summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px}.summary-grid>div{background:#091624;border:1px solid var(--border);border-radius:11px;padding:12px}.summary-grid small,.summary-section .eyebrow{display:block;color:#6f849d;font-size:9px}.summary-grid strong{display:block;margin-top:5px;font-size:18px}.summary-section{border-top:1px solid var(--border);padding:14px 0;display:grid;gap:8px}.summary-section>strong{font-size:12px;line-height:1.5}.summary-section>small{color:var(--muted);font-size:10px}.summary-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:11px}.summary-row strong{font-variant-numeric:tabular-nums}@media(max-width:700px){.history-row{grid-template-columns:1fr auto}.history-row .history-view{grid-column:1/-1}.summary-grid{grid-template-columns:1fr 1fr}.summary-grid>div:last-child{grid-column:1/-1}}
 .clock-diag-modal{width:min(620px,100%)}.diag-summary{padding:14px;border-radius:12px;border:1px solid var(--border);margin-bottom:14px}.diag-summary.pass{background:#092117;border-color:#245c47}.diag-summary.warn{background:#281b12;border-color:#70472d}.diag-summary strong{display:block;font-size:13px}.diag-summary small{display:block;margin-top:4px;color:var(--muted);font-size:10px}.diag-list{display:grid;gap:6px}.diag-row{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:#091624;border:1px solid var(--border);border-radius:10px}.diag-row>span{width:20px;height:20px;display:grid;place-items:center;border-radius:50%;font-size:11px;font-weight:900;flex:none}.diag-row .ok{background:#123a2b;color:#69e0b1}.diag-row .bad{background:#452018;color:#ff9d7d}.diag-row strong{display:block;font-size:11px}.diag-row small{display:block;color:var(--muted);font-size:10px;margin-top:2px}.diag-note{margin-top:14px}
+/* =========================================================
+   SIDELINE COACH COCKPIT — live-game first view
+   ========================================================= */
+.sideline-card{
+  grid-column:1/-1;
+  padding:0;
+  overflow:hidden;
+  background:
+    radial-gradient(700px 260px at 0 0,rgba(94,231,168,.09),transparent 68%),
+    radial-gradient(500px 240px at 100% 100%,rgba(104,167,255,.08),transparent 70%),
+    linear-gradient(145deg,#101f32,#07111f);
+  border-color:rgba(94,231,168,.13);
+}
+.sideline-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:17px 20px 10px;
+}
+.sideline-head h2{margin:0;font-size:20px;letter-spacing:-.04em}
+.sideline-live{
+  display:flex;align-items:center;gap:7px;
+  color:#7ef0bc;font-size:8px;font-weight:900;letter-spacing:.13em;
+  padding:7px 9px;border:1px solid rgba(94,231,168,.2);
+  border-radius:999px;background:rgba(94,231,168,.05)
+}
+.sideline-live .pulse{width:5px;height:5px}
+.sideline-context{
+  display:grid;grid-template-columns:auto 1fr auto;align-items:end;
+  gap:14px;padding:5px 20px 14px;
+}
+.sideline-score{display:flex;align-items:center;gap:7px}
+.sideline-score strong{font-size:32px;line-height:1;font-variant-numeric:tabular-nums}
+.sideline-score span{color:#526780;font-size:18px}
+.sideline-context>div:nth-child(2){font-size:11px;color:#92a5ba;font-weight:850}
+.sideline-context>div:last-child{
+  font-size:9px;font-weight:900;letter-spacing:.12em;color:#8297ad;
+  padding-bottom:3px
+}
+.sideline-call{
+  margin:0 20px 13px;padding:15px;
+  border-radius:15px;background:rgba(4,12,21,.72);
+  border:1px solid rgba(255,255,255,.07)
+}
+.sideline-call-copy{position:relative;padding-left:13px;border-left:3px solid #60748b}
+.sideline-call-copy.action{border-left-color:var(--accent)}
+.sideline-call-copy.hot{border-left-color:var(--hot)}
+.sideline-call-copy.warning{border-left-color:var(--warning)}
+.sideline-call-label{display:block;color:#62778f;font-size:7px;font-weight:900;letter-spacing:.16em;margin-bottom:5px}
+.sideline-call strong{display:block;font-size:17px;letter-spacing:-.025em}
+.sideline-call small{display:block;color:#8fa2b8;font-size:10px;line-height:1.45;margin-top:4px}
+.sideline-reasons{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px}
+.sideline-reasons span{
+  border:1px solid rgba(255,255,255,.07);background:#0d1c2c;
+  border-radius:7px;padding:4px 6px;color:#a4b6c9;font-size:8px;font-weight:800
+}
+.sideline-five{padding:0 20px 12px}
+.sideline-five-head{
+  display:flex;justify-content:space-between;color:#60748c;
+  font-size:7px;font-weight:900;letter-spacing:.15em;margin-bottom:6px
+}
+.sideline-five-head span:last-child{color:#83e5b5}
+.sideline-five-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.sideline-player{
+  min-width:0;padding:9px 7px;border-radius:10px;
+  background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.055)
+}
+.sideline-player>span:first-child{display:block;color:#61758c;font-size:7px;font-weight:900;letter-spacing:.1em}
+.sideline-player strong{
+  display:block;font-size:10px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
+.sideline-player .tag{display:inline-block;margin-top:4px;font-size:7px}
+.sideline-actions{
+  display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:7px;
+  padding:0 20px 18px
+}
+.sideline-actions button{font-size:10px;padding:10px 9px}
+@media(max-width:700px){
+  .sideline-head{padding:14px 13px 8px}
+  .sideline-head h2{font-size:17px}
+  .sideline-context{padding:4px 13px 11px;gap:9px}
+  .sideline-score strong{font-size:27px}
+  .sideline-call{margin:0 13px 10px;padding:12px}
+  .sideline-call strong{font-size:15px}
+  .sideline-five{padding:0 13px 10px}
+  .sideline-five-grid{gap:4px}
+  .sideline-player{padding:8px 5px}
+  .sideline-player strong{font-size:8px}
+  .sideline-actions{padding:0 13px 13px;gap:5px}
+  .sideline-actions button{font-size:9px;padding:9px 5px}
+}
+/* Keep the legacy command dashboard available, but visually secondary. */
+.game-command{order:20}
+.sideline-card{order:1}
+.game-strip{order:0}
+.lineup-card{order:2}
+.assistant-card{order:3}
+@media(max-width:900px){
+  .game-command{display:none}
+  .sideline-card{position:relative}
+}
