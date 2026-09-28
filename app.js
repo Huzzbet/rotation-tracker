@@ -365,7 +365,7 @@ async function runClockDiagnostics(){
   add('Mode reset',F[state.mode]&&state.remaining<=F[state.mode].sec+0.001,'current mode cannot exceed its period length');
   add('Service worker',!!navigator.serviceWorker,'service worker API available');
   add('Persistence',typeof localStorage!=='undefined'&&(()=>{try{let k='rotationIQ.clockDiag';localStorage.setItem(k,'ok');let v=localStorage.getItem(k);localStorage.removeItem(k);return v==='ok'}catch{return false}})(),'localStorage read/write works');
-  const before={remaining:state.remaining,running:state.running,started:state.clockStartedAt,base:state.clockBaseRemaining,tracked:state.clockTracked,mode:state.mode,period:state.period};
+  const gameBefore=JSON.parse(JSON.stringify(state)); const wasRunning=state.running;
   if(state.running)pauseClock();
   const testStart=state.remaining>2?state.remaining:periodSec();
   state.remaining=testStart;state.clockBaseRemaining=testStart;state.clockTracked=0;state.running=false;state.clockStartedAt=null;
@@ -382,15 +382,8 @@ async function runClockDiagnostics(){
   state.remaining=periodSec();state.clockBaseRemaining=state.remaining;state.clockTracked=0;state.running=false;state.clockStartedAt=null;
   updateClockUI();
   add('Reset value',state.remaining===periodSec(),'reset restored '+tm(periodSec()));
-  state.running=before.running;state.remaining=Math.min(before.remaining,periodSec());state.clockStartedAt=before.started;state.clockBaseRemaining=before.base??state.remaining;state.clockTracked=before.tracked??0;
-  if(state.running){
-    state.clockStartedAt=Date.now();
-    state.clockBaseRemaining=state.remaining;
-    state.clockTracked=0;
-    if(clockInterval)clearInterval(clockInterval);
-    clockInterval=setInterval(syncClock,100);
-  }else if(clockInterval){clearInterval(clockInterval);clockInterval=null}
-  save();render();
+  if(clockInterval){clearInterval(clockInterval);clockInterval=null} state=gameBefore;
+  if(wasRunning){state.running=true;state.clockStartedAt=Date.now();state.clockBaseRemaining=state.remaining;state.clockTracked=0;clockInterval=setInterval(syncClock,100)}else{state.running=false;state.clockStartedAt=null} save();render();
   let failed=results.filter(x=>!x.ok).length;
   let root=document.getElementById('modalRoot');
   root.innerHTML='<div class="modal-backdrop"><div class="modal clock-diag-modal"><div class="modal-head"><div><span class="eyebrow">SYSTEM CHECK</span><h2>Clock diagnostics</h2></div><button class="icon-btn" id="closeClockDiag">×</button></div><div class="modal-body"><div class="diag-summary '+(failed?'warn':'pass')+'"><strong>'+(failed?'CHECKS NEED ATTENTION':'ALL CLOCK CHECKS PASSED')+'</strong><small>'+results.length+' checks · '+(results.length-failed)+' passed · '+failed+' failed</small></div><div class="diag-list">'+results.map(x=>'<div class="diag-row"><span class="'+(x.ok?'ok':'bad')+'">'+(x.ok?'✓':'!')+'</span><div><strong>'+x.name+'</strong><small>'+x.detail+'</small></div></div>').join('')+'</div><p class="muted diag-note">The live countdown test is temporary and the game state is restored after the check.</p></div></div></div>';
