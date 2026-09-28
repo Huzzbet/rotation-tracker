@@ -390,7 +390,12 @@ function readiness(x){
   return {label:'READY',cls:'ready',score:4};
 }
 function cycleAvailability(id){
-  act(()=>{let x=p(id);if(!x)return;x.availability=x.availability==='ready'?'limited':x.availability==='limited'?'out':'ready';if(x.availability==='out'&&court(id)){let pos=POS.find(k=>state.lineup[k]===id);if(pos)state.lineup[pos]=null;}});
+  act(()=>{
+    let x=p(id);if(!x)return;
+    let next=x.availability==='ready'?'limited':x.availability==='limited'?'out':'ready';
+    if(next==='out'&&court(id)){toast('Sub '+x.name+' off court before marking OUT');return}
+    x.availability=next;
+  });
   let x=p(id);toast(x.name+' · '+readiness(x).label);
 }
 function tags(x){let r=readiness(x);return '<span class="tag readiness '+r.cls+'">'+r.label+'</span>'+(x.hot?'<span class="tag hot">HOT</span>':'')+(x.foul?'<span class="tag foul">FOUL</span>':'')+(x.rest?'<span class="tag rest">REST</span>':'')}
