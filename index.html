@@ -69,6 +69,31 @@
         </div>
       </section>
 
+      <section class="sideline-card card" id="sidelineCard">
+        <div class="sideline-head">
+          <div>
+            <span class="eyebrow">COACH MODE</span>
+            <h2>What should I do next?</h2>
+          </div>
+          <span class="sideline-live"><span class="pulse"></span> LIVE</span>
+        </div>
+        <div class="sideline-context">
+          <div class="sideline-score"><strong id="sideTeamScore">0</strong><span>–</span><strong id="sideOppScore">0</strong></div>
+          <div><span id="sideQuarter">Q1</span><span> · </span><span id="sideClock">10:00</span></div>
+          <div id="sideSituation">TIED</div>
+        </div>
+        <div class="sideline-call" id="sidelineCall"></div>
+        <div class="sideline-five">
+          <div class="sideline-five-head"><span>CURRENT FIVE</span><span id="sideStructure">5 / 5</span></div>
+          <div id="sidelineFive" class="sideline-five-grid"></div>
+        </div>
+        <div class="sideline-actions">
+          <button class="primary-btn" id="sideApply">Make recommended sub</button>
+          <button class="secondary-btn" id="sideQuick">Quick sub</button>
+          <button class="secondary-btn" id="sideTimeout">Timeout</button>
+        </div>
+      </section>
+
       <section class="game-command card">
         <div class="command-main">
           <div class="command-label">GAME COMMAND</div>
@@ -222,6 +247,6 @@
   <section class="history-card card"><div class="section-head"><div><span class="eyebrow">GAME REVIEW</span><h2>Recent games</h2></div><span class="muted">Your coaching record</span></div><div id="historyBoard" class="history-board"></div></section>
       <div id="modalRoot"></div>
   <div id="toast" class="toast" role="status"></div>
-  <script src="app.js?v=clock5"></script>
+  <script src="app.js?v=clock6"></script>
 </body>
 </html>
