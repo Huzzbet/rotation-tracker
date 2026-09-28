@@ -90,7 +90,17 @@ function periodSec(){return F[state.mode].sec}
 function structure(){let missing=POS.filter(x=>!state.lineup[x]),seen=new Set(),dupes=[],invalid=[];Object.values(state.lineup).forEach(id=>seen.has(id)?dupes.push(id):seen.add(id));POS.forEach(x=>{let q=p(state.lineup[x]);if(q&&!q.positions.includes(x))invalid.push(q.name+' at '+PN[x])});return {missing,dupes,invalid,clean:!missing.length&&!dupes.length&&!invalid.length}}
 let clockInterval=null;
 
+function clockGuard(){
+  const max=periodSec();
+  const value=Number(state.remaining);
+  if(!Number.isFinite(value))state.remaining=max;
+  else state.remaining=Math.max(0,Math.min(value,max));
+  if(state.running&&state.clockEndAt&&state.clockEndAt<=Date.now())state.remaining=0;
+  return state.remaining;
+}
+
 function updateClockUI(){
+  clockGuard();
   const d=document.getElementById('clockDisplay');
   const q=document.getElementById('periodLabel');
   const b=document.getElementById('clockToggle');
@@ -110,9 +120,10 @@ function syncClock(){
   const now=Date.now();
   const last=state.clockLastSyncAt||now;
   const delta=Math.max(0,(now-last)/1000);
+  const previousRemaining=Math.max(0,Number(state.remaining)||0);
   state.clockLastSyncAt=now;
   state.remaining=Math.max(0,(state.clockEndAt-now)/1000);
-  if(delta)accountClock(Math.min(delta,Math.max(0,state.remaining+delta)));
+  if(delta)accountClock(Math.min(delta,previousRemaining));
   if(state.remaining<=0){
     state.remaining=0;
     state.running=false;
@@ -130,6 +141,7 @@ function syncClock(){
 }
 
 function startClock(){
+  clockGuard();
   if(state.remaining<=0&&state.period<F[state.mode].periods){nextQ();return}
   if(state.running)return;
   state.running=true;
@@ -404,6 +416,10 @@ function setup(){let root=document.getElementById('modalRoot'),rows=state.roster
 function saveSetup(){act(()=>document.querySelectorAll('.setup-row').forEach(row=>{let x=p(row.dataset.id);x.name=row.querySelector('[data-name]').value.trim()||x.name;let pos=[...row.querySelectorAll('[data-pos].active')].map(b=>+b.dataset.pos);if(pos.length)x.positions=pos}));document.getElementById('modalRoot').innerHTML='';toast('Team setup saved')}
 function bind(){document.getElementById('undoBtn').onclick=undo;document.getElementById('courtPositions').onclick=e=>{let chip=e.target.closest('[data-quick-pos] .player-chip');if(chip)quickSub(+chip.closest('[data-quick-pos]').dataset.quickPos)};document.getElementById('courtPositions').onkeydown=e=>{let chip=e.target.closest('[data-quick-pos] .player-chip');if(chip&&(e.key==='Enter'||e.key===' ')){e.preventDefault();quickSub(+chip.closest('[data-quick-pos]').dataset.quickPos)}};document.getElementById('redoBtn').onclick=redo;document.getElementById('newGameBtn').onclick=newGame;document.getElementById('clockDiagBtn').onclick=runClockDiagnostics;document.getElementById('finishGameBtn').onclick=finishGame;document.getElementById('historyBoard').onclick=e=>{let b=e.target.closest('[data-history]');if(b)reviewHistory(b.dataset.history)};document.getElementById('setupBtn').onclick=setup;document.getElementById('clockToggle').onclick=()=>state.remaining===0&&state.period<F[state.mode].periods?nextQ():toggleClock();document.getElementById('clockDisplay').onclick=()=>state.remaining===0&&state.period<F[state.mode].periods?nextQ():toggleClock();document.getElementById('clockReset').onclick=()=>act(()=>{state.running=false;state.clockEndAt=null;state.clockLastSyncAt=null;state.remaining=periodSec();if(clockInterval){clearInterval(clockInterval);clockInterval=null}});document.getElementById('applyRecommendation').onclick=applyRec;document.getElementById('resetMinutesBtn').onclick=resetMinutes;document.querySelectorAll('#planSwitch button').forEach(b=>b.onclick=()=>act(()=>{state.plan=b.dataset.plan}));document.querySelectorAll('#tacticalSwitch button').forEach(b=>b.onclick=()=>act(()=>{state.tactic=b.dataset.tactic}));document.querySelectorAll('#modeSwitch button').forEach(b=>b.onclick=()=>act(()=>{state.mode=b.dataset.mode;state.period=1;state.remaining=F[state.mode].sec;state.running=false;state.clockEndAt=null;state.clockLastSyncAt=null;if(clockInterval){clearInterval(clockInterval);clockInterval=null}}));document.querySelectorAll('.score-controls button').forEach(b=>b.onclick=()=>score(b.dataset.score,+b.dataset.delta));document.getElementById('opponentBoard').onclick=e=>{let b=e.target.closest('[data-opponent]');if(b){act(()=>{state.opponent[b.dataset.opponent]=!state.opponent[b.dataset.opponent]});return}};document.getElementById('statusFilter').onclick=e=>{let b=e.target.closest('button');if(b){filter=b.dataset.filter;render()}};document.getElementById('rosterGrid').onclick=e=>{let b=e.target.closest('[data-status]');if(b){status(b.dataset.id,b.dataset.status);return}b=e.target.closest('[data-sub]');if(b)manual(b.dataset.sub)};window.onkeydown=e=>{if((e.metaKey||e.ctrlKey)&&e.key==='z'){e.preventDefault();undo()}if(e.code==='Space'&&document.activeElement.tagName!=='INPUT'){e.preventDefault();toggleClock()}}}
 bind();render();
+if(state.running&&state.clockEndAt){
+  syncClock();
+  if(state.running&&!clockInterval)clockInterval=setInterval(syncClock,100);
+}
 
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible'&&state.running){
@@ -417,6 +433,16 @@ window.addEventListener('pageshow',()=>{
     syncClock();
     if(!clockInterval)clockInterval=setInterval(syncClock,100);
   }
+});
+
+window.addEventListener('pagehide',()=>{
+  if(state.running)syncClock();
+  save();
+});
+
+window.addEventListener('beforeunload',()=>{
+  if(state.running)syncClock();
+  save();
 });
 
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}
