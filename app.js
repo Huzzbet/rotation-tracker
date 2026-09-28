@@ -1,7 +1,15 @@
 const KEY='rotationIQ.v2', POS=[1,2,3,4,5], PN={1:'PG',2:'SG',3:'SF',4:'PF',5:'C'}, F={rep:{periods:4,sec:600},domestic:{periods:2,sec:1080}};
 const DEFAULT=[['rodion','Rodion Prystupa',94,[4,5]],['jacob','Jacob Nguyen',36,[4,5]],['archer','Archer Kenny',16,[2,3]],['max','Max Payne',10,[2,3]],['bill','Bill Pham',20,[1,2,3,4]],['alvin','Alvin Chen',86,[1,2,3]],['ethan','Ethan Poon',90,[3,4]],['tom',"Thomas O'Sullivan",22,[1,2,3]],['tate','Tate Power',72,[2,3,4]]];
 let state=load(),undoStack=[],redoStack=[],filter='all';
-state.running=false; state.clockStartedAt=null; state.remaining=Math.min(Number(state.remaining)||periodSec(),periodSec()); state.clockBaseRemaining=state.remaining; state.clockTracked=0;
+state.remaining=Math.min(Number(state.remaining)||periodSec(),periodSec());
+if(state.running&&state.clockEndAt){
+  state.remaining=Math.max(0,(state.clockEndAt-Date.now())/1000);
+  if(state.remaining<=0)state.running=false;
+}else{
+  state.running=false;
+}
+state.clockEndAt=state.running?state.clockEndAt:null;
+state.clockLastSyncAt=state.running?Date.now():null;
 if(!state.plan)state.plan='balanced'; if(!state.tactic)state.tactic='balanced'; if(!state.chemistry)state.chemistry={}; if(!state.opponent)state.opponent={press:false,zone:false,scoring:false,rebound:false,shooting:false,ballhandling:false};
 function fresh(){return {mode:'rep',period:1,remaining:600,running:false,team:0,opp:0,lineup:{1:'alvin',2:'tom',3:'archer',4:'ethan',5:'rodion'},roster:DEFAULT.map(x=>({id:x[0],name:x[1],number:x[2],positions:x[3],hot:false,rest:false,foul:false,on:0,stint:0,restSec:0})),timeline:[],timeouts:[],plan:'balanced',tactic:'balanced',chemistry:{},opponent:{press:false,zone:false,scoring:false,rebound:false,shooting:false,ballhandling:false}}}
 function load(){try{let x=JSON.parse(localStorage.getItem(KEY));if(!x)return fresh();let base=fresh();x.roster=(x.roster||base.roster).map((p0,i)=>{let d=DEFAULT.find(d=>d[0]===p0.id)||DEFAULT[i];return {...p0,name:(!p0.name||p0.name===d?.[1]?.split(' ')[0])?d?.[1]:p0.name,number:p0.number??d?.[2]??'',positions:p0.positions||d?.[3]||[]}});return x}catch{return fresh()}}
@@ -80,8 +88,8 @@ function tm(s){s=Math.max(0,Math.ceil(s));return String(Math.floor(s/60)).padSta
 function min(s){return Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0')}
 function periodSec(){return F[state.mode].sec}
 function structure(){let missing=POS.filter(x=>!state.lineup[x]),seen=new Set(),dupes=[],invalid=[];Object.values(state.lineup).forEach(id=>seen.has(id)?dupes.push(id):seen.add(id));POS.forEach(x=>{let q=p(state.lineup[x]);if(q&&!q.positions.includes(x))invalid.push(q.name+' at '+PN[x])});return {missing,dupes,invalid,clean:!missing.length&&!dupes.length&&!invalid.length}}
-let timerFrame=null;
 let clockInterval=null;
+
 function updateClockUI(){
   const d=document.getElementById('clockDisplay');
   const q=document.getElementById('periodLabel');
@@ -90,25 +98,26 @@ function updateClockUI(){
   if(q)q.textContent='Q'+state.period;
   if(b)b.textContent=state.remaining===0&&state.period<F[state.mode].periods?'Next quarter':state.running?'Pause':'Start';
 }
+
+function accountClock(seconds){
+  if(seconds<=0)return;
+  trackChemistry(seconds);
+  state.roster.forEach(x=>court(x.id)?(x.on+=seconds,x.stint+=seconds):(x.restSec+=seconds));
+}
+
 function syncClock(){
-  if(!state.running||!state.clockStartedAt)return false;
-  const elapsed=Math.max(0,(Date.now()-state.clockStartedAt)/1000);
-  const next=Math.max(0,state.clockBaseRemaining-elapsed);
-  const tracked=Math.min(elapsed,Math.max(0,state.clockBaseRemaining));
-  const already=Math.max(0,state.clockTracked||0);
-  const add=Math.max(0,tracked-already);
-  state.remaining=next;
-  if(add>0){
-    trackChemistry(add);
-    state.roster.forEach(x=>court(x.id)?(x.on+=add,x.stint+=add):(x.restSec+=add));
-    state.clockTracked=tracked;
-  }
+  if(!state.running||!state.clockEndAt)return false;
+  const now=Date.now();
+  const last=state.clockLastSyncAt||now;
+  const delta=Math.max(0,(now-last)/1000);
+  state.clockLastSyncAt=now;
+  state.remaining=Math.max(0,(state.clockEndAt-now)/1000);
+  if(delta)accountClock(Math.min(delta,Math.max(0,state.remaining+delta)));
   if(state.remaining<=0){
     state.remaining=0;
     state.running=false;
-    state.clockStartedAt=null;
-    state.clockBaseRemaining=0;
-    state.clockTracked=0;
+    state.clockEndAt=null;
+    state.clockLastSyncAt=null;
     if(clockInterval){clearInterval(clockInterval);clockInterval=null}
     save();
     updateClockUI();
@@ -119,45 +128,45 @@ function syncClock(){
   updateClockUI();
   return true;
 }
+
 function startClock(){
   if(state.remaining<=0&&state.period<F[state.mode].periods){nextQ();return}
   if(state.running)return;
   state.running=true;
-  state.clockBaseRemaining=state.remaining;
-  state.clockStartedAt=Date.now();
-  state.clockTracked=0;
+  state.clockEndAt=Date.now()+Math.max(0,state.remaining)*1000;
+  state.clockLastSyncAt=Date.now();
   if(clockInterval)clearInterval(clockInterval);
   clockInterval=setInterval(syncClock,100);
   updateClockUI();
   save();
 }
+
 function pauseClock(){
   if(!state.running)return;
   syncClock();
   state.running=false;
-  state.clockStartedAt=null;
-  state.clockBaseRemaining=state.remaining;
-  state.clockTracked=0;
+  state.clockEndAt=null;
+  state.clockLastSyncAt=null;
   if(clockInterval){clearInterval(clockInterval);clockInterval=null}
   updateClockUI();
   save();
   render();
 }
-function toggleClock(){
-  if(state.running)pauseClock();else startClock();
-}
+
+function toggleClock(){if(state.running)pauseClock();else startClock()}
+
 function nextQ(){
   if(state.period>=F[state.mode].periods)return;
   act(()=>{
     state.period++;
     state.remaining=periodSec();
     state.running=false;
-    state.clockStartedAt=null;
-    state.clockBaseRemaining=state.remaining;
-    state.clockTracked=0;
+    state.clockEndAt=null;
+    state.clockLastSyncAt=null;
     state.roster.forEach(x=>x.stint=0);
   });
 }
+
 function opponentWeight(x){
   let o=state.opponent||{},s=0,r=[];
   if(o.press){
@@ -368,7 +377,7 @@ async function runClockDiagnostics(){
   const gameBefore=JSON.parse(JSON.stringify(state)); const wasRunning=state.running;
   if(state.running)pauseClock();
   const testStart=state.remaining>2?state.remaining:periodSec();
-  state.remaining=testStart;state.clockBaseRemaining=testStart;state.clockTracked=0;state.running=false;state.clockStartedAt=null;
+  state.remaining=testStart;state.clockEndAt=null;state.clockLastSyncAt=null;state.running=false;
   const t0=state.remaining;
   startClock();
   await new Promise(r=>setTimeout(r,1200));
@@ -379,11 +388,11 @@ async function runClockDiagnostics(){
   const paused=t1;
   await new Promise(r=>setTimeout(r,400));
   add('Pause holds time',Math.abs(state.remaining-paused)<0.15,'clock remained within 0.15s after pause');
-  state.remaining=periodSec();state.clockBaseRemaining=state.remaining;state.clockTracked=0;state.running=false;state.clockStartedAt=null;
+  state.remaining=periodSec();state.clockEndAt=null;state.clockLastSyncAt=null;state.running=false;
   updateClockUI();
   add('Reset value',state.remaining===periodSec(),'reset restored '+tm(periodSec()));
   if(clockInterval){clearInterval(clockInterval);clockInterval=null} state=gameBefore;
-  if(wasRunning){state.running=true;state.clockStartedAt=Date.now();state.clockBaseRemaining=state.remaining;state.clockTracked=0;clockInterval=setInterval(syncClock,100)}else{state.running=false;state.clockStartedAt=null} save();render();
+  if(wasRunning){state.running=true;state.clockEndAt=Date.now()+state.remaining*1000;state.clockLastSyncAt=Date.now();clockInterval=setInterval(syncClock,100)}else{state.running=false;state.clockStartedAt=null} save();render();
   let failed=results.filter(x=>!x.ok).length;
   let root=document.getElementById('modalRoot');
   root.innerHTML='<div class="modal-backdrop"><div class="modal clock-diag-modal"><div class="modal-head"><div><span class="eyebrow">SYSTEM CHECK</span><h2>Clock diagnostics</h2></div><button class="icon-btn" id="closeClockDiag">×</button></div><div class="modal-body"><div class="diag-summary '+(failed?'warn':'pass')+'"><strong>'+(failed?'CHECKS NEED ATTENTION':'ALL CLOCK CHECKS PASSED')+'</strong><small>'+results.length+' checks · '+(results.length-failed)+' passed · '+failed+' failed</small></div><div class="diag-list">'+results.map(x=>'<div class="diag-row"><span class="'+(x.ok?'ok':'bad')+'">'+(x.ok?'✓':'!')+'</span><div><strong>'+x.name+'</strong><small>'+x.detail+'</small></div></div>').join('')+'</div><p class="muted diag-note">The live countdown test is temporary and the game state is restored after the check.</p></div></div></div>';
@@ -393,6 +402,21 @@ function newGame(){if(!confirm('Start a new game? Current game data will be clea
 function resetMinutes(){act(()=>state.roster.forEach(x=>{x.on=0;x.stint=0;x.restSec=0}))}
 function setup(){let root=document.getElementById('modalRoot'),rows=state.roster.map(x=>'<div class="setup-row" data-id="'+x.id+'"><div class="field"><label>Name</label><input data-name value="'+x.name.replace(/"/g,'&quot;')+'"></div><div class="field"><label>Natural positions</label><div class="position-picks">'+POS.map(y=>'<button type="button" data-pos="'+y+'" class="'+(x.positions.includes(y)?'active':'')+'">'+PN[y]+'</button>').join('')+'</div></div></div>').join('');root.innerHTML='<div class="modal-backdrop"><div class="modal"><div class="modal-head"><h2>Team setup</h2><button class="icon-btn" id="closeSetup">×</button></div><div class="modal-body"><p class="muted">Edit names and natural positions. The engine uses these positions to preserve structure.</p>'+rows+'<div class="modal-actions"><button class="secondary-btn" id="cancelSetup">Cancel</button><button class="primary-btn" id="saveSetup">Save team</button></div></div></div></div>';root.querySelectorAll('[data-pos]').forEach(b=>b.onclick=()=>b.classList.toggle('active'));document.getElementById('closeSetup').onclick=()=>root.innerHTML='';document.getElementById('cancelSetup').onclick=()=>root.innerHTML='';document.getElementById('saveSetup').onclick=saveSetup}
 function saveSetup(){act(()=>document.querySelectorAll('.setup-row').forEach(row=>{let x=p(row.dataset.id);x.name=row.querySelector('[data-name]').value.trim()||x.name;let pos=[...row.querySelectorAll('[data-pos].active')].map(b=>+b.dataset.pos);if(pos.length)x.positions=pos}));document.getElementById('modalRoot').innerHTML='';toast('Team setup saved')}
-function bind(){document.getElementById('undoBtn').onclick=undo;document.getElementById('courtPositions').onclick=e=>{let chip=e.target.closest('[data-quick-pos] .player-chip');if(chip)quickSub(+chip.closest('[data-quick-pos]').dataset.quickPos)};document.getElementById('courtPositions').onkeydown=e=>{let chip=e.target.closest('[data-quick-pos] .player-chip');if(chip&&(e.key==='Enter'||e.key===' ')){e.preventDefault();quickSub(+chip.closest('[data-quick-pos]').dataset.quickPos)}};document.getElementById('redoBtn').onclick=redo;document.getElementById('newGameBtn').onclick=newGame;document.getElementById('clockDiagBtn').onclick=runClockDiagnostics;document.getElementById('finishGameBtn').onclick=finishGame;document.getElementById('historyBoard').onclick=e=>{let b=e.target.closest('[data-history]');if(b)reviewHistory(b.dataset.history)};document.getElementById('setupBtn').onclick=setup;document.getElementById('clockToggle').onclick=()=>state.remaining===0&&state.period<F[state.mode].periods?nextQ():toggleClock();document.getElementById('clockDisplay').onclick=()=>state.remaining===0&&state.period<F[state.mode].periods?nextQ():toggleClock();document.getElementById('clockReset').onclick=()=>act(()=>{state.running=false;state.clockStartedAt=null;state.clockBaseRemaining=periodSec();state.clockTracked=0;state.remaining=periodSec();if(timerFrame)cancelAnimationFrame(timerFrame);timerFrame=null});document.getElementById('applyRecommendation').onclick=applyRec;document.getElementById('resetMinutesBtn').onclick=resetMinutes;document.querySelectorAll('#planSwitch button').forEach(b=>b.onclick=()=>act(()=>{state.plan=b.dataset.plan}));document.querySelectorAll('#tacticalSwitch button').forEach(b=>b.onclick=()=>act(()=>{state.tactic=b.dataset.tactic}));document.querySelectorAll('#modeSwitch button').forEach(b=>b.onclick=()=>act(()=>{state.mode=b.dataset.mode;state.period=1;state.remaining=F[state.mode].sec;state.running=false;state.clockStartedAt=null;state.clockBaseRemaining=state.remaining;state.clockTracked=0;if(clockInterval){clearInterval(clockInterval);clockInterval=null}}));document.querySelectorAll('.score-controls button').forEach(b=>b.onclick=()=>score(b.dataset.score,+b.dataset.delta));document.getElementById('opponentBoard').onclick=e=>{let b=e.target.closest('[data-opponent]');if(b){act(()=>{state.opponent[b.dataset.opponent]=!state.opponent[b.dataset.opponent]});return}};document.getElementById('statusFilter').onclick=e=>{let b=e.target.closest('button');if(b){filter=b.dataset.filter;render()}};document.getElementById('rosterGrid').onclick=e=>{let b=e.target.closest('[data-status]');if(b){status(b.dataset.id,b.dataset.status);return}b=e.target.closest('[data-sub]');if(b)manual(b.dataset.sub)};window.onkeydown=e=>{if((e.metaKey||e.ctrlKey)&&e.key==='z'){e.preventDefault();undo()}if(e.code==='Space'&&document.activeElement.tagName!=='INPUT'){e.preventDefault();toggleClock()}}}
+function bind(){document.getElementById('undoBtn').onclick=undo;document.getElementById('courtPositions').onclick=e=>{let chip=e.target.closest('[data-quick-pos] .player-chip');if(chip)quickSub(+chip.closest('[data-quick-pos]').dataset.quickPos)};document.getElementById('courtPositions').onkeydown=e=>{let chip=e.target.closest('[data-quick-pos] .player-chip');if(chip&&(e.key==='Enter'||e.key===' ')){e.preventDefault();quickSub(+chip.closest('[data-quick-pos]').dataset.quickPos)}};document.getElementById('redoBtn').onclick=redo;document.getElementById('newGameBtn').onclick=newGame;document.getElementById('clockDiagBtn').onclick=runClockDiagnostics;document.getElementById('finishGameBtn').onclick=finishGame;document.getElementById('historyBoard').onclick=e=>{let b=e.target.closest('[data-history]');if(b)reviewHistory(b.dataset.history)};document.getElementById('setupBtn').onclick=setup;document.getElementById('clockToggle').onclick=()=>state.remaining===0&&state.period<F[state.mode].periods?nextQ():toggleClock();document.getElementById('clockDisplay').onclick=()=>state.remaining===0&&state.period<F[state.mode].periods?nextQ():toggleClock();document.getElementById('clockReset').onclick=()=>act(()=>{state.running=false;state.clockEndAt=null;state.clockLastSyncAt=null;state.remaining=periodSec();if(clockInterval){clearInterval(clockInterval);clockInterval=null}});document.getElementById('applyRecommendation').onclick=applyRec;document.getElementById('resetMinutesBtn').onclick=resetMinutes;document.querySelectorAll('#planSwitch button').forEach(b=>b.onclick=()=>act(()=>{state.plan=b.dataset.plan}));document.querySelectorAll('#tacticalSwitch button').forEach(b=>b.onclick=()=>act(()=>{state.tactic=b.dataset.tactic}));document.querySelectorAll('#modeSwitch button').forEach(b=>b.onclick=()=>act(()=>{state.mode=b.dataset.mode;state.period=1;state.remaining=F[state.mode].sec;state.running=false;state.clockEndAt=null;state.clockLastSyncAt=null;if(clockInterval){clearInterval(clockInterval);clockInterval=null}}));document.querySelectorAll('.score-controls button').forEach(b=>b.onclick=()=>score(b.dataset.score,+b.dataset.delta));document.getElementById('opponentBoard').onclick=e=>{let b=e.target.closest('[data-opponent]');if(b){act(()=>{state.opponent[b.dataset.opponent]=!state.opponent[b.dataset.opponent]});return}};document.getElementById('statusFilter').onclick=e=>{let b=e.target.closest('button');if(b){filter=b.dataset.filter;render()}};document.getElementById('rosterGrid').onclick=e=>{let b=e.target.closest('[data-status]');if(b){status(b.dataset.id,b.dataset.status);return}b=e.target.closest('[data-sub]');if(b)manual(b.dataset.sub)};window.onkeydown=e=>{if((e.metaKey||e.ctrlKey)&&e.key==='z'){e.preventDefault();undo()}if(e.code==='Space'&&document.activeElement.tagName!=='INPUT'){e.preventDefault();toggleClock()}}}
 bind();render();
+
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&state.running){
+    syncClock();
+    if(!clockInterval)clockInterval=setInterval(syncClock,100);
+  }
+});
+
+window.addEventListener('pageshow',()=>{
+  if(state.running){
+    syncClock();
+    if(!clockInterval)clockInterval=setInterval(syncClock,100);
+  }
+});
+
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}
