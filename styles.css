@@ -776,3 +776,29 @@ body:before{
   .game-command{display:none}
   .sideline-card{position:relative}
 }
+
+/* Sideline action feedback */
+.sideline-last{
+  margin:0 20px 11px;padding:9px 12px;border-radius:10px;
+  display:grid;grid-template-columns:70px 1fr auto;align-items:center;gap:8px;
+  background:rgba(94,231,168,.035);border:1px solid rgba(94,231,168,.08)
+}
+.sideline-last span{font-size:7px;font-weight:900;letter-spacing:.13em;color:#61758d}
+.sideline-last strong{font-size:9px}
+.sideline-last small{font-size:8px;color:#71859c}
+.sideline-score-actions{
+  display:flex;align-items:center;gap:6px;padding:0 20px 16px
+}
+.sideline-score-actions>span{margin-right:auto;color:#61758d;font-size:7px;font-weight:900;letter-spacing:.14em}
+.sideline-score-actions button{
+  border:1px solid rgba(255,255,255,.07);background:#0b1929;color:#9fb2c7;
+  border-radius:7px;padding:6px 8px;font-size:8px;font-weight:850
+}
+.sideline-score-actions button:hover{border-color:rgba(94,231,168,.25);color:#d9e8e1}
+.sideline-actions{grid-template-columns:1.5fr 1fr 1fr auto}
+@media(max-width:700px){
+  .sideline-last{margin:0 13px 9px;grid-template-columns:60px 1fr}
+  .sideline-last small{grid-column:2}
+  .sideline-score-actions{padding:0 13px 12px}
+  .sideline-actions{grid-template-columns:1.4fr 1fr 1fr auto}
+}
