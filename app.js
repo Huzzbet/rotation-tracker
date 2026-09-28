@@ -460,7 +460,7 @@ function bindSideline(){
   if(apply)apply.onclick=applyRec;
   if(quick)quick.onclick=()=>{let r=rec();if(r)quickSub(r.pos);else toast('No positional quick sub available');};
   if(to)to.onclick=callTimeout;
-  const undo=document.getElementById('sideUndo');if(undo)undo.onclick=undo;
+  const undoBtn=document.getElementById('sideUndo');if(undoBtn)undoBtn.onclick=undo;
   const scoreTeam=document.getElementById('sideScoreTeam'),scoreOpp=document.getElementById('sideScoreOpp');
   if(scoreTeam)scoreTeam.onclick=()=>score('team',1);
   if(scoreOpp)scoreOpp.onclick=()=>score('opp',1);
