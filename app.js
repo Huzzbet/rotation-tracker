@@ -392,7 +392,7 @@ async function runClockDiagnostics(){
   updateClockUI();
   add('Reset value',state.remaining===periodSec(),'reset restored '+tm(periodSec()));
   if(clockInterval){clearInterval(clockInterval);clockInterval=null} state=gameBefore;
-  if(wasRunning){state.running=true;state.clockEndAt=Date.now()+state.remaining*1000;state.clockLastSyncAt=Date.now();clockInterval=setInterval(syncClock,100)}else{state.running=false;state.clockStartedAt=null} save();render();
+  if(wasRunning){state.running=true;state.clockEndAt=Date.now()+state.remaining*1000;state.clockLastSyncAt=Date.now();clockInterval=setInterval(syncClock,100)}else{state.running=false;state.clockEndAt=null;state.clockLastSyncAt=null} save();render();
   let failed=results.filter(x=>!x.ok).length;
   let root=document.getElementById('modalRoot');
   root.innerHTML='<div class="modal-backdrop"><div class="modal clock-diag-modal"><div class="modal-head"><div><span class="eyebrow">SYSTEM CHECK</span><h2>Clock diagnostics</h2></div><button class="icon-btn" id="closeClockDiag">×</button></div><div class="modal-body"><div class="diag-summary '+(failed?'warn':'pass')+'"><strong>'+(failed?'CHECKS NEED ATTENTION':'ALL CLOCK CHECKS PASSED')+'</strong><small>'+results.length+' checks · '+(results.length-failed)+' passed · '+failed+' failed</small></div><div class="diag-list">'+results.map(x=>'<div class="diag-row"><span class="'+(x.ok?'ok':'bad')+'">'+(x.ok?'✓':'!')+'</span><div><strong>'+x.name+'</strong><small>'+x.detail+'</small></div></div>').join('')+'</div><p class="muted diag-note">The live countdown test is temporary and the game state is restored after the check.</p></div></div></div>';
