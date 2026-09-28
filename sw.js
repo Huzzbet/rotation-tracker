@@ -1,4 +1,4 @@
-const CACHE='rotation-iq-v13';
+const CACHE='rotation-iq-v14';
 self.addEventListener('install',e=>e.waitUntil(self.skipWaiting().then(()=>caches.open(CACHE).then(c=>c.addAll(['./','./index.html','./styles.css','./manifest.json'])))));
 self.addEventListener('activate',e=>e.waitUntil(clients.claim().then(()=>caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))))));
 self.addEventListener('fetch',e=>{
