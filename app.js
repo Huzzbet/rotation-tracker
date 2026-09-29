@@ -339,9 +339,10 @@ function renderChemistry(){
 function renderGameIntelligence(){let el=document.getElementById('gameIntelligence');if(!el)return;let ctx=gameContext(),current=contextEntry(),rows=Object.entries(state.chemistry).filter(([k,e])=>e.context&&e.sec>0).sort((a,b)=>b[1].sec-a[1].sec).slice(0,6);let label=current.sec<45?'LEARNING':current.net>=5?'WORKING':current.net<=-5?'WATCH':'NEUTRAL';el.innerHTML='<div class="intel-current"><div><span class="eyebrow">CURRENT GAME STATE</span><strong>'+ctx+'</strong><small>'+min(current.sec)+' tracked in this situation</small></div><span class="intel-badge '+label.toLowerCase()+'">'+label+'</span></div>'+'<div class="intel-grid"><div><small>STATE NET</small><strong>'+(current.net>0?'+':'')+current.net+'</strong></div><div><small>PHASE</small><strong>'+clockPhase()+'</strong></div><div><small>SCORE</small><strong>'+state.team+'–'+state.opp+'</strong></div></div>'+'<div class="intel-history">'+(rows.length?rows.map(([k,e])=>{let parts=k.split('||'),five=parts[0].split('|').map(id=>p(id)?.name||'—').join(' · '),n=e.net>0?'+'+e.net:String(e.net);return '<div class="intel-row"><div><strong>'+parts[1]+'</strong><small>'+five+'</small></div><span>'+n+'</span></div>'}).join(''):'<div class="muted">Rotation IQ will learn which lineups perform in different game situations.</div>')+'</div>'}
 function renderSideline(){
   let el=document.getElementById('sidelineCard'); if(!el)return;
-  let r=rec(), d=state.team-state.opp, s=structure();
-  let title='Stay with the five', detail='No urgent positional change. Coach control remains the final call.', tone='steady';
-  if(r){
+  let r=rec(), d=state.team-state.opp, s=structure(), alerts=workloadAlerts();
+  let title='Stay with the five', detail='No urgent rotation signal. Coach control remains the final call.', tone='steady';
+  if(alerts.length){title='⏱ '+alerts[0].label;detail=alerts[0].text;tone=alerts[0].level==='urgent'?'warning':'steady';}
+  if(r&&!alerts.some(a=>a.level==='urgent')){
     let incoming=p(r.in),outgoing=p(r.out);
     title=incoming.name+' for '+outgoing.name+' · '+PN[r.pos];
     detail=r.r.length?r.r.slice(0,3).join(' · '):'Clean positional replacement.';
@@ -363,7 +364,7 @@ function renderSideline(){
     let x=p(state.lineup[pos]);
     return '<div class="sideline-player"><span>'+PN[pos]+'</span><strong>'+(x?x.name:'Open')+'</strong>'+(x?tags(x):'')+'</div>';
   }).join('');
-  let reasons=r&&r.r.length?r.r.slice(0,3).map(x=>'<span>'+x+'</span>').join(''):'<span>Structure intact</span><span>Coach remains in control</span>';
+  let reasons=alerts.length?alerts.slice(0,2).map(a=>a.label+' · '+a.text).join('</span><span>'):(r&&r.r.length?r.r.slice(0,3).map(x=>'<span>'+x+'</span>').join(''):'<span>Structure intact</span><span>Coach remains in control</span>');
   document.getElementById('sideTeamScore').textContent=state.team;
   document.getElementById('sideOppScore').textContent=state.opp;
   document.getElementById('sideQuarter').textContent='Q'+state.period;
@@ -378,8 +379,25 @@ function renderSideline(){
   apply.disabled=!r; apply.style.opacity=r?1:.48; apply.textContent=r?'Make recommended sub':'No sub needed';
   quick.disabled=!r; quick.style.opacity=r?.95:.48;
 }
-function renderCommand(){let d=state.team-state.opp,ctx=gameContext(),hot=state.roster.filter(x=>x.hot).length,long=state.roster.filter(x=>court(x.id)&&x.stint>=180),title='Ready for tip-off',sub='Rotation IQ will surface the next coaching decision as the game develops.',lead=d===0?'EVEN':(d>0?'+'+d:'−'+Math.abs(d)),st=long.length?min(long[0].stint):'—';if(d>0){title='You are controlling the game';sub='Protect the structure and manage the next clean rotation.'}if(d<0){title='Time to respond';sub='Freshness, HOT options and positional fit are being prioritised.'}if(hot){title='HOT hand detected';sub='A HOT tag is active — the engine will protect that option where structure allows.'}if(long.length){title='Rotation window approaching';sub=long[0].name+' has logged a long stint. A positional change may be due.'}let label=d>2?'Lakers momentum':d< -2?'Opponent momentum':'EVEN',pct=Math.max(8,Math.min(92,50+d*7));document.getElementById('liveQuarter').textContent='Q'+state.period;document.getElementById('livePhase').textContent=clockPhase();document.getElementById('liveSituation').textContent=scoreBand();document.getElementById('commandTitle').textContent=title;document.getElementById('commandSub').textContent=sub;document.getElementById('commandLead').textContent=lead;document.getElementById('commandStint').textContent=st;document.getElementById('commandHot').textContent=hot;document.getElementById('momentumLabel').textContent=label;document.getElementById('momentumBar').style.width=pct+'%';document.getElementById('momentumBar').setAttribute('aria-label',label);}function render(){renderSideline();renderCommand();clock();lineup();roster();minutes();timeline();recommend();coachNow();plan();renderTactical();renderClosing();renderChemistry();renderGameIntelligence();renderOpponent();renderTimeout();renderHistory();document.querySelectorAll('#modeSwitch button').forEach(b=>b.classList.toggle('active',b.dataset.mode===state.mode));document.getElementById('teamScore').textContent=state.team;document.getElementById('oppScore').textContent=state.opp;document.querySelectorAll('#statusFilter button').forEach(b=>b.classList.toggle('active',b.dataset.filter===filter))}
+function renderWorkloadBoard(){
+  let el=document.getElementById('workloadBoard');if(!el)return;
+  let alerts=workloadAlerts();
+  if(!alerts.length){el.innerHTML='<div class="workload-clear"><span>✓</span><div><strong>Workload looks healthy</strong><small>No long-stint or high-load alert right now.</small></div></div>';return}
+  el.innerHTML=alerts.slice(0,5).map(a=>'<div class="workload-alert '+a.level+'"><span class="workload-icon">'+(a.level==='urgent'?'!':'~')+'</span><div><strong>'+a.label+'</strong><small>'+a.text+'</small></div></div>').join('');
+}
+function renderCommand(){let d=state.team-state.opp,ctx=gameContext(),hot=state.roster.filter(x=>x.hot).length,long=state.roster.filter(x=>court(x.id)&&x.stint>=180),title='Ready for tip-off',sub='Rotation IQ will surface the next coaching decision as the game develops.',lead=d===0?'EVEN':(d>0?'+'+d:'−'+Math.abs(d)),st=long.length?min(long[0].stint):'—';if(d>0){title='You are controlling the game';sub='Protect the structure and manage the next clean rotation.'}if(d<0){title='Time to respond';sub='Freshness, HOT options and positional fit are being prioritised.'}if(hot){title='HOT hand detected';sub='A HOT tag is active — the engine will protect that option where structure allows.'}if(long.length){title='Rotation window approaching';sub=long[0].name+' has logged a long stint. A positional change may be due.'}let label=d>2?'Lakers momentum':d< -2?'Opponent momentum':'EVEN',pct=Math.max(8,Math.min(92,50+d*7));document.getElementById('liveQuarter').textContent='Q'+state.period;document.getElementById('livePhase').textContent=clockPhase();document.getElementById('liveSituation').textContent=scoreBand();document.getElementById('commandTitle').textContent=title;document.getElementById('commandSub').textContent=sub;document.getElementById('commandLead').textContent=lead;document.getElementById('commandStint').textContent=st;document.getElementById('commandHot').textContent=hot;document.getElementById('momentumLabel').textContent=label;document.getElementById('momentumBar').style.width=pct+'%';document.getElementById('momentumBar').setAttribute('aria-label',label);}function render(){renderSideline();renderWorkloadBoard();renderCommand();clock();lineup();roster();minutes();timeline();recommend();coachNow();plan();renderTactical();renderClosing();renderChemistry();renderGameIntelligence();renderOpponent();renderTimeout();renderHistory();document.querySelectorAll('#modeSwitch button').forEach(b=>b.classList.toggle('active',b.dataset.mode===state.mode));document.getElementById('teamScore').textContent=state.team;document.getElementById('oppScore').textContent=state.opp;document.querySelectorAll('#statusFilter button').forEach(b=>b.classList.toggle('active',b.dataset.filter===filter))}
 function clock(){document.getElementById('clockDisplay').textContent=tm(state.remaining);document.getElementById('periodLabel').textContent='Q'+state.period;document.getElementById('clockToggle').textContent=state.remaining===0&&state.period<F[state.mode].periods?'Next quarter':state.running?'Pause':'Start'}
+function workloadAlert(x){
+  if(!x)return null;
+  let stint=x.stint||0,total=x.on||0;
+  if(court(x.id)&&stint>=300)return {level:'urgent',label:'LONG STINT',text:x.name+' has been on for '+min(stint)+'. Consider a change at the next clean stoppage.'};
+  if(court(x.id)&&stint>=240)return {level:'watch',label:'STINT WATCH',text:x.name+' has been on for '+min(stint)+'. A fresh positional option may be available.'};
+  if(total>=720)return {level:'watch',label:'HIGH LOAD',text:x.name+' has '+min(total)+' total. Manage the next rotation if possible.'};
+  return null;
+}
+function workloadAlerts(){
+  return state.roster.map(workloadAlert).filter(Boolean).sort((a,b)=>(a.level==='urgent'?0:1)-(b.level==='urgent'?0:1));
+}
 function readiness(x){
   if(x.availability==='out')return {label:'OUT',cls:'out',score:-100};
   if(x.availability==='limited')return {label:'LIMITED',cls:'limited',score:-25};
