@@ -822,3 +822,17 @@ body:before{
 .tag.readiness.limited{color:#ffdb87;background:rgba(255,207,102,.1)}
 .tag.readiness.out{color:#ff9ca7;background:rgba(255,111,125,.1)}
 .tag.readiness.long{color:#c0cad5;background:#172535}
+
+/* Workload watch */
+.workload-card{grid-column:1/-1;background:radial-gradient(600px 200px at 0 0,rgba(255,207,102,.05),transparent 70%),linear-gradient(145deg,rgba(14,27,44,.98),rgba(7,15,26,.98))}
+.workload-board{padding:0 20px 20px;display:grid;gap:7px}
+.workload-alert,.workload-clear{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:11px;background:#091624;border:1px solid rgba(255,255,255,.06)}
+.workload-alert.urgent{border-color:rgba(255,111,125,.28);background:rgba(255,111,125,.045)}
+.workload-alert.watch{border-color:rgba(255,207,102,.18)}
+.workload-icon{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;background:#172536;color:#ffda80;font-size:11px;font-weight:900;flex:none}
+.workload-alert.urgent .workload-icon{background:rgba(255,111,125,.12);color:#ff8c98}
+.workload-alert strong,.workload-clear strong{display:block;font-size:10px}
+.workload-alert small,.workload-clear small{display:block;color:#8195aa;font-size:8px;line-height:1.4;margin-top:3px}
+.workload-clear{border-color:rgba(94,231,168,.1);color:#70e3b0}
+.workload-clear>span{width:22px;height:22px;display:grid;place-items:center;border-radius:7px;background:rgba(94,231,168,.08);font-size:11px}
+@media(max-width:700px){.workload-board{padding:0 13px 14px}}
